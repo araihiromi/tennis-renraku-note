@@ -372,7 +372,7 @@ function shareItems(m){
   for(const p of monthPractices(m)){
     if(p.status==='cancelled'||!p.fee)continue;
     const ids=attendees(p._id);
-    items.push({key:'p:'+p._id,kind:'コート代',label:`コート代（${md(p.date)}）`,date:p.date,amount:Number(p.fee),ids,share:ids.length?roundUp(p.fee/ids.length):0,practiceId:p._id,costId:'',sub:ids.length?`${ids.length}名で按分（1人 ${yen(roundUp(p.fee/ids.length))}）`:'参加者がいないため未割当'});
+    items.push({key:'p:'+p._id,kind:'テニスコート代金',label:`テニスコート代金（${md(p.date)}）`,date:p.date,amount:Number(p.fee),ids,share:ids.length?roundUp(p.fee/ids.length):0,practiceId:p._id,costId:'',sub:ids.length?`${ids.length}名で按分（1人 ${yen(roundUp(p.fee/ids.length))}）`:'参加者がいないため未割当'});
   }
   for(const c of S.costs.filter(c=>inMonth(c.date,m))){
     const ids=c.split==='practice'&&c.practiceId?attendees(c.practiceId):memberIds();
@@ -426,7 +426,7 @@ function todoItems(){
   for(const r of asks)t.push({text:`${md(practice(r.practiceId).date)} ${name(r.fromId)}さんから送迎のお願いが届いています`,act:'goRide',p:r.practiceId});
   for(const m of [shiftMonth(ym(new Date()),-1),ym(new Date())]){
     const b=myBal(m);
-    if(b&&b.bal<-0.5)t.push({text:`${mnum(m)}分のコート代の精算が残っています（${yen(-b.bal)}）`,act:'goMoney',k:m});
+    if(b&&b.bal<-0.5)t.push({text:`${mnum(m)}分のテニスコート代金の精算が残っています（${yen(-b.bal)}）`,act:'goMoney',k:m});
   }
   for(const p of S.posts.filter(p=>p.level!=='normal'&&!confirmed(p._id)))t.push({text:`重要連絡「${p.title}」を確認してください`,act:'goTalk',k:'important'});
   return S.family.length?t:[];
@@ -502,15 +502,15 @@ function render(){
   let h='';
   if(S.offline)h+='<div class="warn">共有データに接続できません。サインインした状態でこのページを開いてください。</div>';
   if(S.detail&&practice(S.detail))h+=viewDetail(practice(S.detail));
-  else{S.detail=null;h+=({home:viewHome,plan:viewPlan,ride:viewRide,money:viewMoney,talk:viewTalk,record:viewRecord,me:viewMe,safety:viewSafety,admin:viewAdmin}[S.tab]||viewHome)()}
+  else{S.detail=null;h+=({home:viewHome,plan:viewPlan,ride:viewPlan,money:viewMoney,talk:viewTalk,record:viewRecord,me:viewMe,safety:viewSafety,admin:viewAdmin}[S.tab]||viewHome)()}
   app.innerHTML=h;
 }
 function renderOverlay(todo){
   const o=document.getElementById('overlay');let h='';
   if(S.drawer){
-    const items=[['home','home','ホーム'],['plan','plan','練習予定'],['ride','car','送迎調整'],['talk','talk','連絡掲示板'],['money','money','費用管理'],['record','record','練習記録'],['safety','shield','緊急連絡・安全'],['me','person','マイページ・家族']];
+    const items=[['home','home','ホーム'],['plan','plan','練習予定'],['goRide','car','送迎調整'],['talk','talk','連絡掲示板'],['money','money','費用管理'],['record','record','練習記録'],['safety','shield','緊急連絡・安全'],['me','person','マイページ・家族']];
     if(S.admin)items.push(['admin','dash','管理者画面']);
-    h+=`<div class="drawer" data-act="closeOverlay"><nav class="in" aria-label="メニュー" data-stop="1"><div class="brand"><span class="ball"></span>テニス部連絡ノート</div>${items.map(([k,i,l])=>`<button class="navitem${S.tab===k?' on':''}" data-act="tab" data-k="${k}">${ic(i)}${l}</button>`).join('')}
+    h+=`<div class="drawer" data-act="closeOverlay"><nav class="in" aria-label="メニュー" data-stop="1"><div class="brand"><span class="ball"></span>テニス部連絡ノート</div>${items.map(([k,i,l])=>`<button class="navitem${S.tab===k?' on':''}" data-act="${k==='goRide'?'goRide':'tab'}" data-k="${k==='goRide'?'':k}">${ic(i)}${l}</button>`).join('')}
       ${S.settings.pwHash&&!S.admin?`<button class="navitem" data-act="logout">${ic('back')}ログアウト</button>`:''}
       <p class="note" style="padding:14px 12px 0">${S.family.length?esc(S.family.map(name).join('・'))+' の保護者として利用中':'マイページでお子さんを選んでください'}</p></nav></div>`;
   }
@@ -529,7 +529,7 @@ function needFamily(){
 function facts(p,full){
   const f=[[ 'clock',(p.start||'')+(p.end?' 〜 '+p.end:'')],['pin',`${p.place}　<span class="courtno">${esc(p.court)}番コート</span>`,true]];
   if(p.meetTime||p.meetPlace)f.push(['person','集合 '+[p.meetTime,p.meetPlace].filter(Boolean).join(' ')]);
-  if(full){if(p.fee)f.push(['money',`コート代 ${yen(p.fee)}（参加者で割り勘）`]);if(p.deadline)f.push(['bell','回答締切 '+dl(p.deadline)]);if(p.note)f.push(['talk',p.note])}
+  if(full){if(p.fee)f.push(['money',`テニスコート代金 ${yen(p.fee)}（参加者で割り勘）`]);if(p.deadline)f.push(['bell','回答締切 '+dl(p.deadline)]);if(p.note)f.push(['talk',p.note])}
   return `<div class="facts">${f.map(([i,t,raw])=>`<div class="fact">${ic(i)}<span>${raw?t.replace(p.place,esc(p.place)):esc(t)}</span></div>`).join('')}</div>`;
 }
 
@@ -590,7 +590,7 @@ function viewPlan(){
   if(!list.length)h+=`<div class="empty"><strong>${monthLabel(S.month)}の練習予定はまだありません</strong><span>「予定を作成」から登録できます。誰でも作成できます。</span></div>`;
   for(const p of list){
     h+=`<button class="pcard${p.date<today()?' past':''}" data-act="openDetail" data-p="${p._id}"><div class="grow">
-      <div class="row between"><span class="t">${jdate(p.date)}（${wd(p.date)}）</span>${statusPill(p)}</div>${facts(p)}</div><span class="chev">${ic('chev')}</span></button>`;
+      <div class="row between"><span class="t">${jdate(p.date)}（${wd(p.date)}）</span>${statusPill(p)}</div>${facts(p)}${rideSummary(p)}</div><span class="chev">${ic('chev')}</span></button>`;
   }
   return h+`<button class="btn primary block" data-act="newPractice">${ic('plus')}予定を作成</button>`;
 }
@@ -600,8 +600,9 @@ function viewDetail(p){
   const cx=p.status==='cancelled';
   let h=`<section class="card"><div class="row between"><div class="bigdate">${jdate(p.date)}<small>（${wd(p.date)}）</small></div>${statusPill(p)}</div>
     <div class="muted">${esc(p.start||'')}${p.end?' 〜 '+esc(p.end):''}</div>
-    ${tabs('dtab',[['summary','概要'],['attend','出欠'],['bring','持ち物'],['talk','連絡']],S.dtab)}`;
+    ${tabs('dtab',[['summary','概要'],['attend','出欠'],['ride','送迎'],['bring','持ち物'],['talk','連絡']],S.dtab)}`;
   if(S.dtab==='attend')h+=detailAttend(p);
+  else if(S.dtab==='ride')h+=p.status==='cancelled'?'<p class="note">この練習は中止のため、送迎の調整はありません。</p>':rideBody(p);
   else if(S.dtab==='bring')h+=detailBring(p);
   else if(S.dtab==='talk')h+=detailTalk(p);
   else h+=detailSummary(p);
@@ -613,7 +614,7 @@ function detailSummary(p){
   let h=facts(p,true);
   if(cx)h+=`<div class="notice red"><div class="t">${ic('alert')}中止</div><p>${esc(p.cancelReason||'理由の記載なし')}</p></div>`;
   if(p.fee&&yes.length)h+=`<p class="note">いまの参加者 ${yes.length}名で割ると、1人 ${yen(roundUp(p.fee/yes.length))}（${S.settings.round||10}円単位で切り上げ）。月末にまとめて精算します。</p>`;
-  if(p.fee&&!cx){const cp=courtPaid(p._id);h+=cp.length?`<p class="note">コート代を払った人：${cp.map(x=>`<strong>${esc(famLabel(x.memberId))}</strong>（${yen(x.amount)}）${S.admin||mineFam(x.memberId)?` <button class="link muted" data-act="delPay" data-r="${x._id}">取り消す</button>`:''}`).join('、')}</p>`:'<p class="note" style="color:var(--red)">コート代を払った人はまだ記録されていません。</p>'}
+  if(p.fee&&!cx){const cp=courtPaid(p._id);h+=cp.length?`<p class="note">テニスコート代金を払った人：${cp.map(x=>`<strong>${esc(famLabel(x.memberId))}</strong>（${yen(x.amount)}）${S.admin||mineFam(x.memberId)?` <button class="link muted" data-act="delPay" data-r="${x._id}">取り消す</button>`:''}`).join('、')}</p>`:'<p class="note" style="color:var(--red)">テニスコート代金を払った人はまだ記録されていません。</p>'}
   if(!cx){
     const drv=S.responses.filter(r=>r.practiceId===p._id&&r.attend==='yes'&&r.transport==='can');
     const need=S.responses.filter(r=>r.practiceId===p._id&&r.attend==='yes'&&r.transport==='cannot');
@@ -623,7 +624,7 @@ function detailSummary(p){
   const hist=p.history||[];
   if(hist.length)h+=`<details><summary>変更履歴（${hist.length}件）</summary><ul>${hist.slice().reverse().map(x=>`<li>${stamp(x.at)} ${esc(x.text)}</li>`).join('')}</ul></details>`;
   h+=`<div class="row">
-    ${S.family.length&&!cx&&p.fee&&!courtPaid(p._id).length?`<button class="btn sm primary" data-act="sheet" data-k="pay" data-p="${p._id}">コート代を払った</button>`:''}
+    ${S.family.length&&!cx&&p.fee&&!courtPaid(p._id).length?`<button class="btn sm primary" data-act="sheet" data-k="pay" data-p="${p._id}">テニスコート代金を払った</button>`:''}
     ${p.date<=today()&&!cx?`<button class="btn sm" data-act="sheet" data-k="record" data-p="${p._id}">${p.record?'練習記録を編集':'練習記録を書く'}</button>`:''}
     <button class="btn sm" data-act="sheet" data-k="practice" data-p="${p._id}">編集</button>
     <button class="btn sm" data-act="sheet" data-k="dup" data-p="${p._id}">複製</button>
@@ -645,7 +646,7 @@ function detailAttend(p){
   h+=shown.length?`<div class="plist">${shown.map(({m,r,on})=>`<div class="prow">${av(m._id)}<div class="grow"><strong>${esc(m.name)}</strong> <span class="small muted">${m.parent?'（'+esc(m.parent)+'さん）':''}</span>${on&&r.transport?`<div class="small muted">${r.transport==='can'?'車を出せる（'+(r.seats||0)+'人乗れる）':r.transport==='cannot'?'送迎希望':'自分で行く'}</div>`:''}</div>
       ${on?(r.walkIn?'<span class="pill orange">管理者が追加</span>':'<span class="pill">参加</span>'):'<span class="pill grey">—</span>'}
       ${S.admin&&!cx?(on?`<button class="link muted" data-act="adminAttend" data-p="${p._id}" data-m="${m._id}" data-k="">外す</button>`:`<button class="btn sm outline" data-act="adminAttend" data-p="${p._id}" data-m="${m._id}" data-k="yes">参加にする</button>`):''}</div>`).join('')}</div>`:'<p class="note">該当する人はいません。</p>';
-  if(S.admin)h+='<p class="note">保護者の登録なしで来た子は、管理者が「参加にする」で追加できます。追加した子もコート代の割り勘と参加日数に入ります。</p>';
+  if(S.admin)h+='<p class="note">保護者の登録なしで来た子は、管理者が「参加にする」で追加できます。追加した子もテニスコート代金の割り勘と参加日数に入ります。</p>';
   return h;
 }
 function detailBring(p){
@@ -669,18 +670,16 @@ function rideCtx(p){
   const assigned=mid=>accepted.find(r=>r.fromId===mid);
   return {drivers,riders,rides,accepted,used,assigned};
 }
-function viewRide(){
-  const list=upcoming().filter(p=>p.status!=='cancelled');
-  if(!list.length)return `<div class="empty"><strong>送迎を調整する練習がありません</strong><span>これからの練習予定が登録されると、ここで車の募集と乗車希望を調整できます。</span></div>`;
-  if(!list.some(p=>p._id===S.ridePid))S.ridePid=list[0]._id;
-  const p=practice(S.ridePid);
+function rideSummary(p){
+  if(p.status==='cancelled'||p.date<today())return '';
+  const C=rideCtx(p);if(!C.drivers.length&&!C.riders.length)return `<div class="fact small muted">${ic('car')}<span>送迎の登録はまだありません</span></div>`;
+  const seats=C.drivers.reduce((t,d)=>t+Math.max(0,(d.seats||0)-C.used(d)),0),wait=C.riders.filter(r=>!C.assigned(r.memberId)).length;
+  return `<div class="fact small">${ic('car')}<span>車 ${C.drivers.length}台・空き ${seats}人・乗りたい ${C.riders.length}人${wait?` <span class="pill orange">未決定 ${wait}</span>`:' <span class="pill">送迎決定</span>'}</span></div>`;
+}
+function rideBody(p){
+  // 送迎調整（練習の詳細の「送迎」タブに表示）
   const C=rideCtx(p);
-  let h=needFamily();
-  if(list.length>1)h+=`<div class="seg">${list.slice(0,8).map(x=>`<button class="y" data-act="ridePick" data-p="${x._id}" aria-pressed="${x._id===p._id}">${mdw(x.date)}</button>`).join('')}</div>`;
-  h+=`<section class="card"><div class="row between"><span class="bigdate" style="font-size:18px">${jdate(p.date)}（${wd(p.date)}）</span>${statusPill(p)}</div>
-    <div class="muted small">${esc(p.start||'')}${p.end?' 〜 '+esc(p.end):''}</div>
-    <div class="fact small">${ic('pin')}<span>${esc(p.place)}${p.meetTime?'（集合 '+esc(p.meetTime)+'）':''}</span></div></section>`;
-  h+=`<section class="card">`+tabs('ride',[['drivers','乗せられる'],['riders','乗りたい'],['result','調整結果']],S.sub.ride);
+  let h=`<div class="seg" role="group" aria-label="送迎">${[['drivers','乗せられる'],['riders','乗りたい'],['result','調整結果']].map(([k,l])=>`<button class="y" data-act="sub" data-g="ride" data-k="${k}" aria-pressed="${S.sub.ride===k}">${l}</button>`).join('')}</div>`;
   const S2=S.sub.ride;
   if(S2==='drivers'){
     h+=`<div class="row between"><span class="sec-t">車を出せる方 <span class="muted" title="参加と回答したうえで車を出せる家庭">${ic('q')}</span></span>${S.family.length?`<button class="btn sm primary" data-act="sheet" data-k="driver" data-p="${p._id}">${ic('plus')}登録する</button>`:''}</div>`;
@@ -707,7 +706,7 @@ function viewRide(){
     if(waiting.length)h+=`<p class="note">まだ決まっていない人：${waiting.map(r=>esc(name(r.memberId))+'さん').join('、')}</p>`;
     h+='<p class="note">住所や電話番号は書かずに、待ち合わせ場所と時刻だけを共有してください。</p>';
   }
-  return h+'</section>';
+  return h;
 }
 function rideLine(r){
   return `<div class="row small" style="padding-left:44px;gap:8px">${ic('person')}<span class="grow">${esc(name(r.fromId))}さん ・ ${esc(r.meetPoint||resp(r.practiceId,r.fromId)?.pickup||'待ち合わせ未定')}</span>${mineFam(r.byId)||isMine(r.fromId)||S.admin?`<button class="link muted" data-act="rideUndo" data-r="${r._id}">取り消す</button>`:''}</div>`;
@@ -725,8 +724,8 @@ function moneyMonth(){
   const items=shareItems(S.month);
   const tr=transfers(S.month);
   let h=`<div class="row between"><h2>${mnum(S.month)}の精算</h2>${tr.length?'<span class="pill orange">未精算あり</span>':items.length?'<span class="pill">精算済み</span>':''}</div>
-    <p class="note">コート代はその日に誰かが立て替えて払い、ほかの家庭は月に1回まとめて立て替えた人に払います。</p>`;
-  h+=items.length?`<div class="lines">${items.map(it=>{const up=upfront(it);return `<div class="line"><div><div>・${esc(it.label)}</div><div class="sub">${esc(it.sub)}</div><div class="sub">${up.length?'立替：'+up.map(x=>esc(famLabel(x.memberId))).join('、'):'<span style="color:var(--red)">まだ誰も払っていません</span>'}</div></div><div style="text-align:right"><span class="amt">${yen(it.amount)}</span>${!up.length&&S.family.length?`<br><button class="link" data-act="sheet" data-k="pay" data-p="${it.costId?'':it.practiceId}" data-m="${it.costId||''}">払った</button>`:''}</div></div>`}).join('')}</div>`:'<p class="note">今月の費用はまだありません。コート代のある練習や、ボール代などを登録するとここに出ます。</p>';
+    <p class="note">テニスコート代金はその日に誰かが立て替えて払い、ほかの家庭は月に1回まとめて立て替えた人に払います。</p>`;
+  h+=items.length?`<div class="lines">${items.map(it=>{const up=upfront(it);return `<div class="line"><div><div>・${esc(it.label)}</div><div class="sub">${esc(it.sub)}</div><div class="sub">${up.length?'立替：'+up.map(x=>esc(famLabel(x.memberId))).join('、'):'<span style="color:var(--red)">まだ誰も払っていません</span>'}</div></div><div style="text-align:right"><span class="amt">${yen(it.amount)}</span>${!up.length&&S.family.length?`<br><button class="link" data-act="sheet" data-k="pay" data-p="${it.costId?'':it.practiceId}" data-m="${it.costId||''}">払った</button>`:''}</div></div>`}).join('')}</div>`:'<p class="note">今月の費用はまだありません。テニスコート代金のある練習や、ボール代などを登録するとここに出ます。</p>';
   const b=myBal(S.month);
   if(b&&(b.owe||b.paid)){
     const bal=Math.round(b.bal);
@@ -751,13 +750,13 @@ function paidTable(m){
     if(x.to)by[k].settle+=Number(x.amount||0);else by[k].up+=Number(x.amount||0);
   }
   const keys=Object.keys(by);
-  return `<h3>${mnum(m)}に払った金額（全員に公開）</h3>`+(keys.length?`<div class="scroll"><table><thead><tr><th class="sticky">家庭</th><th class="num">コート代などの立替</th><th class="num">精算で払った</th><th class="num">合計</th></tr></thead><tbody>${keys.map(k=>`<tr${mineFam(k)?' class="mine"':''}><td class="sticky">${esc(famLabel(k))}<div class="small muted">${S.members.filter(x=>famKey(x._id)===k).map(x=>esc(x.name)).join('・')}</div></td><td class="num">${by[k].up?yen(by[k].up):'—'}</td><td class="num">${by[k].settle?yen(by[k].settle):'—'}</td><td class="num"><strong>${yen(by[k].up+by[k].settle)}</strong></td></tr>`).join('')}</tbody></table></div>`:'<p class="note">今月はまだ誰も払っていません。</p>');
+  return `<h3>${mnum(m)}に払った金額（全員に公開）</h3>`+(keys.length?`<div class="scroll"><table><thead><tr><th class="sticky">家庭</th><th class="num">テニスコート代金などの立替</th><th class="num">精算で払った</th><th class="num">合計</th></tr></thead><tbody>${keys.map(k=>`<tr${mineFam(k)?' class="mine"':''}><td class="sticky">${esc(famLabel(k))}<div class="small muted">${S.members.filter(x=>famKey(x._id)===k).map(x=>esc(x.name)).join('・')}</div></td><td class="num">${by[k].up?yen(by[k].up):'—'}</td><td class="num">${by[k].settle?yen(by[k].settle):'—'}</td><td class="num"><strong>${yen(by[k].up+by[k].settle)}</strong></td></tr>`).join('')}</tbody></table></div>`:'<p class="note">今月はまだ誰も払っていません。</p>');
 }
 function moneyHistory(){
   const list=S.payments.filter(x=>payMonth(x)===S.month).sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
   let h=S.family.length?`<div class="row"><button class="btn sm primary" data-act="sheet" data-k="pay">${ic('plus')}支払いを記録</button><button class="btn sm" data-act="sheet" data-k="cost">${ic('plus')}ボール代・備品代を追加</button></div>`:'';
   if(!list.length)return h+`<p class="note">${monthLabel(S.month)}の支払い記録はまだありません。</p>`;
-  return h+`<div class="lines">${list.map(x=>{const pr=practice(x.practiceId),c=S.costs.find(y=>y._id===x.costId);const can=S.admin||isMine(x.memberId);return `<div class="line"><div><div><strong>${mdw(x.date)}</strong> ${esc(famLabel(x.memberId))}</div><div class="sub">${x.to?esc(famLabel(x.to))+'へ精算':'会計・コートへ'}${c?' ・ '+esc(c.kind):pr?' ・ '+md(pr.date)+'のコート代':''}${x.note?' ・ '+esc(x.note):''}</div></div><div class="row" style="gap:8px"><span class="amt">${yen(x.amount)}</span>${can?(S.confirm==='pay:'+x._id?`<button class="btn sm danger" data-act="delPay" data-r="${x._id}">削除</button>`:`<button class="link muted" data-act="confirm" data-k="pay:${x._id}">削除</button>`):''}</div></div>`}).join('')}</div>`;
+  return h+`<div class="lines">${list.map(x=>{const pr=practice(x.practiceId),c=S.costs.find(y=>y._id===x.costId);const can=S.admin||isMine(x.memberId);return `<div class="line"><div><div><strong>${mdw(x.date)}</strong> ${esc(famLabel(x.memberId))}</div><div class="sub">${x.to?esc(famLabel(x.to))+'へ精算':'会計・コートへ'}${c?' ・ '+esc(c.kind):pr?' ・ '+md(pr.date)+'のテニスコート代金':''}${x.note?' ・ '+esc(x.note):''}</div></div><div class="row" style="gap:8px"><span class="amt">${yen(x.amount)}</span>${can?(S.confirm==='pay:'+x._id?`<button class="btn sm danger" data-act="delPay" data-r="${x._id}">削除</button>`:`<button class="link muted" data-act="confirm" data-k="pay:${x._id}">削除</button>`):''}</div></div>`}).join('')}</div>`;
 }
 function moneySummary(){
   if(!S.members.length)return '<p class="note">選手が登録されていません。</p>';
@@ -767,7 +766,7 @@ function moneySummary(){
   const keys=Object.keys(F).filter(k=>S.admin||mineFam(k)).filter(k=>F[k].owe||F[k].paid||F[k].recv);
   h+=`<h3>${S.admin?mnum(S.month)+'の負担と差額（全家庭・管理者のみ）':mnum(S.month)+'のあなたの家庭'}</h3>`;
   h+=keys.length?`<div class="scroll"><table><thead><tr><th class="sticky">家庭</th><th class="num">負担額</th><th class="num">払った</th><th class="num">受け取った</th><th class="num">月末の精算</th></tr></thead><tbody>${keys.map(k=>{const x=F[k],b=Math.round(x.bal);return `<tr${mineFam(k)?' class="mine"':''}><td class="sticky">${esc(famLabel(k))}<div class="small muted">${S.members.filter(m=>famKey(m._id)===k).map(m=>esc(m.name)).join('・')}</div></td><td class="num">${yen(x.owe)}</td><td class="num">${yen(x.paid)}</td><td class="num">${yen(x.recv)}</td><td class="num ${b<0?'minus':b>0?'plus':''}">${b<0?'支払う '+yen(-b):b>0?'受け取る '+yen(b):'済み'}</td></tr>`}).join('')}</tbody></table></div>`:'<p class="note">今月の負担はありません。</p>';
-  h+=`<p class="note">負担額は参加した練習のコート代などを参加者で割った額（${S.settings.round||10}円単位で切り上げ）です。欠席した日の負担はありません。${S.admin?'この表は管理者だけに表示されます。':'ほかの家庭の負担額は管理者だけが確認できます。'}</p>`;
+  h+=`<p class="note">負担額は参加した練習のテニスコート代金などを参加者で割った額（${S.settings.round||10}円単位で切り上げ）です。欠席した日の負担はありません。${S.admin?'この表は管理者だけに表示されます。':'ほかの家庭の負担額は管理者だけが確認できます。'}</p>`;
   const costs=S.costs.filter(c=>inMonth(c.date)).sort((a,b)=>a.date.localeCompare(b.date));
   if(costs.length)h+=`<h3>ボール代・備品代など</h3><div class="lines">${costs.map(c=>`<div class="line"><div><div>${mdw(c.date)} ${esc(c.kind)}</div><div class="sub">${c.split==='practice'?'練習の参加者で割る':'全員で割る'}${c.note?' ・ '+esc(c.note):''}</div></div><div class="row" style="gap:8px"><span class="amt">${yen(c.amount)}</span>${S.admin||mineFam(c.createdBy)?(S.confirm==='c:'+c._id?`<button class="btn sm danger" data-act="delCost" data-r="${c._id}">削除</button>`:`<button class="link muted" data-act="confirm" data-k="c:${c._id}">削除</button>`):''}</div></div>`).join('')}</div>`;
   return h;
@@ -957,7 +956,7 @@ function sheetBody(){
       <div class="field"><label for="pf-end">終了</label><input id="pf-end" type="time" data-draft="pf.end" value="${v('end')}"></div>
       <div class="field wide"><label for="pf-place">テニスコート名</label><input id="pf-place" list="places" required data-draft="pf.place" value="${v('place')}" placeholder="例：市営テニスコート"><datalist id="places">${places.map(p=>`<option value="${esc(p)}">`).join('')}</datalist></div>
       <div class="field"><label for="pf-court">コート番号</label><input id="pf-court" required data-draft="pf.court" value="${v('court')}" placeholder="例：A・B / 3"></div>
-      <div class="field"><label for="pf-fee">コート代（合計・円）</label><input id="pf-fee" type="number" min="0" step="10" inputmode="numeric" data-draft="pf.fee" value="${v('fee')}" placeholder="例：4000"></div>
+      <div class="field"><label for="pf-fee">テニスコート代金（合計・円）</label><input id="pf-fee" type="number" min="0" step="10" inputmode="numeric" data-draft="pf.fee" value="${v('fee')}" placeholder="例：4000"></div>
       <div class="field"><label for="pf-mt">集合時間</label><input id="pf-mt" type="time" data-draft="pf.meetTime" value="${v('meetTime')}"></div>
       <div class="field"><label for="pf-mp">集合場所</label><input id="pf-mp" data-draft="pf.meetPlace" value="${v('meetPlace')}" placeholder="例：駐車場"></div>
       <div class="field wide"><label for="pf-dl">回答締切</label><input id="pf-dl" type="datetime-local" data-draft="pf.deadline" value="${v('deadline')}"></div>
@@ -978,7 +977,7 @@ function sheetBody(){
   if(k==='walkin'){
     const p=practice(c.p);const off=S.members.filter(m=>resp(p._id,m._id)?.attend!=='yes');
     return `<form data-form="walkin" class="fgrid"><h2 class="wide">参加した子を追加（${mdw(p.date)}）</h2>
-      <p class="note wide">保護者の登録なしで来た子にチェックしてください。追加した子は「管理者が追加」と表示され、参加日数とコート代の割り勘に入ります。</p>
+      <p class="note wide">保護者の登録なしで来た子にチェックしてください。追加した子は「管理者が追加」と表示され、参加日数とテニスコート代金の割り勘に入ります。</p>
       ${off.length?`<div class="plist wide">${off.map(m=>`<label class="prow check" style="align-items:center"><input type="checkbox" data-draft-check="wi.${m._id}" ${draft('wi.'+m._id,false)?'checked':''}> ${av(m._id)}<span class="grow"><strong>${esc(m.name)}</strong> <span class="small muted">${m.parent?esc(m.parent)+'さん':''}</span></span></label>`).join('')}</div>`:'<p class="note wide">登録済みの選手は全員参加になっています。</p>'}
       <div class="field wide"><label for="wi-new">名簿にいない子（新しく登録して追加）</label><input id="wi-new" data-draft="wi.new" value="${esc(draft('wi.new',''))}" placeholder="例：佐藤 花子"></div>
       <div class="actions wide">${close}<button class="btn primary">参加者に追加</button></div></form>`;
@@ -997,8 +996,8 @@ function sheetBody(){
       <div class="field"><label for="py-a">金額（円）</label><input id="py-a" type="number" min="0" inputmode="numeric" data-draft="py.a" value="${esc(draft('py.a',cst.amount))}"></div>
       <div class="field"><label for="py-d">支払った日</label><input id="py-d" type="date" data-draft="py.d" value="${esc(draft('py.d',cst.date||today()))}"></div>
       <div class="actions wide">${close}<button class="btn primary">記録する</button></div></form>`;
-    if(pr)return `<form data-form="pay" class="fgrid"><h2 class="wide">コート代を払った（${mdw(pr.date)}）</h2>
-      <p class="note wide">その日のコート代を全額払った人を記録します。ほかの家庭の分は月末にまとめて精算します。</p>
+    if(pr)return `<form data-form="pay" class="fgrid"><h2 class="wide">テニスコート代金を払った（${mdw(pr.date)}）</h2>
+      <p class="note wide">その日のテニスコート代金を全額払った人を記録します。ほかの家庭の分は月末にまとめて精算します。</p>
       <div class="field"><label for="py-m">払った人</label><select id="py-m" data-draft="py.m">${S.members.map(m=>`<option value="${m._id}"${draft('py.m',rep())===m._id?' selected':''}>${esc(famLabel(m._id))}（${esc(m.name)}）</option>`).join('')}</select></div>
       <div class="field"><label for="py-a">金額（円）</label><input id="py-a" type="number" min="0" inputmode="numeric" data-draft="py.a" value="${esc(draft('py.a',pr.fee||''))}"></div>
       <div class="field"><label for="py-d">支払った日</label><input id="py-d" type="date" data-draft="py.d" value="${esc(draft('py.d',pr.date<=today()?pr.date:today()))}"></div>
@@ -1010,7 +1009,7 @@ function sheetBody(){
       <div class="field"><label for="py-a">金額（円）</label><input id="py-a" type="number" min="0" inputmode="numeric" data-draft="py.a" value="${esc(draft('py.a',pr?pr.fee:''))}"></div>
       <div class="field wide"><label for="py-p">対象の練習</label><select id="py-p" data-draft="py.p"><option value="">指定なし</option>${S.practices.slice().sort(byDate).filter(p=>inMonth(p.date)||p._id===c.p).map(p=>`<option value="${p._id}"${draft('py.p',c.p||'')===p._id?' selected':''}>${mdw(p.date)} ${esc(p.place)}</option>`).join('')}</select></div>
       <div class="field wide"><label for="py-n">メモ</label><input id="py-n" data-draft="py.n" value="${esc(draft('py.n',''))}" placeholder="例：コート受付で現金払い"></div>
-      <p class="note wide">コート代を全額払ったときは「会計・コート・お店」、月末の精算でほかの家庭に払ったときはその家庭を選んでください。</p>
+      <p class="note wide">テニスコート代金を全額払ったときは「会計・コート・お店」、月末の精算でほかの家庭に払ったときはその家庭を選んでください。</p>
       <div class="actions wide">${close}<button class="btn primary">記録する</button></div></form>`;
   }
   if(k==='cost'){
@@ -1066,7 +1065,7 @@ async function markRead(){
   const todo=S.posts.filter(p=>!readDoc(p._id)).slice(0,30);
   for(const p of todo){try{await col('reads').doc(p._id+'__'+r).set({postId:p._id,memberId:r,at:Date.now(),confirmed:false})}catch(_){break}}
 }
-const FIELDS={date:'日付',start:'開始',end:'終了',place:'コート',court:'コート番号',fee:'コート代',meetTime:'集合時間',meetPlace:'集合場所',bring:'持ち物',deadline:'回答締切',note:'メモ'};
+const FIELDS={date:'日付',start:'開始',end:'終了',place:'コート',court:'コート番号',fee:'テニスコート代金',meetTime:'集合時間',meetPlace:'集合場所',bring:'持ち物',deadline:'回答締切',note:'メモ'};
 
 document.addEventListener('click',async e=>{
   if(e.target.closest('[data-stop]')&&!e.target.closest('[data-act]'))return;
@@ -1085,7 +1084,8 @@ document.addEventListener('click',async e=>{
     case 'openDetail':S.detail=p;S.dtab=k||'summary';S.attFilter='yes';S.drawer=false;S.bell=false;window.scrollTo({top:0});break;
     case 'attFilter':S.attFilter=k;break;
     case 'planMode':S.planMode=S.planMode==='stats'?'list':'stats';break;
-    case 'goRide':go('ride');if(p)S.ridePid=p;S.sub.ride=k||(p&&S.rides.some(x=>x.practiceId===p&&x.status==='open'&&x.toId&&isMine(x.toId))?'result':S.sub.ride);break;
+    case 'goRide':{const pid=p||upcoming().find(x=>x.status!=='cancelled')?._id;if(!pid){go('plan');break}
+      S.drawer=false;S.bell=false;S.detail=pid;S.dtab='ride';S.sub.ride=k||(S.rides.some(x=>x.practiceId===pid&&x.status==='open'&&x.toId&&isMine(x.toId))?'result':S.sub.ride);window.scrollTo({top:0});break}
     case 'ridePick':S.ridePid=p;break;
     case 'goMoney':go('money');S.sub.money='month';if(k)S.month=k;break;
     case 'goMoneySum':go('money');S.sub.money='summary';break;

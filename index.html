@@ -273,7 +273,7 @@ const S={
   db:null,user:null,uid:null,admin:false,assets:null,ready:false,offline:false,
   members:[],practices:[],responses:[],rides:[],payments:[],costs:[],posts:[],comments:[],reads:[],likes:[],settings:{},
   family:[],month:ym(new Date()),tab:'home',detail:null,dtab:'summary',attFilter:'all',planMode:'list',
-  sub:{ride:'drivers',money:'month',talk:'all',record:'menu'},ridePid:null,seenAt:0,bellSince:0,knownEv:null,
+  sub:{ride:'drivers',money:'month',talk:'all',record:'menu'},ridePid:null,session:null,invites:[],codes:{},login:{step:'pick'},auth:[],fails:0,waitUntil:0,seenAt:0,bellSince:0,knownEv:null,
   sheet:null,ctx:{},drawer:false,bell:false,open:{},drafts:{},confirm:null,pendingRender:false,photoFor:null
 };
 const WD=['日','月','火','水','木','金','土'];
@@ -497,6 +497,23 @@ function notifyArrivals(){
 
 /* ---------- login password ---------- */
 // One shared password set by an admin. Admins (Editor and up) skip the lock screen.
+function rnd(n){return [...crypto.getRandomValues(new Uint8Array(n))].map(b=>b.toString(16).padStart(2,'0')).join('')}
+// password → hash. PBKDF2 makes guessing a stored hash slow.
+async function kdf(salt,pw,alg){
+  if(alg==='pbkdf2'){
+    const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
+    const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new TextEncoder().encode(salt),iterations:150000},key,256);
+    return [...new Uint8Array(bits)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  let h=salt+':'+pw;for(let i=0;i<3000;i++)h=await sha(h+salt);return h;
+}
+function kdfAlg(){return window.crypto&&crypto.subtle?'pbkdf2':'sha-iter'}
+async function makeSecret(pw){const salt=rnd(16),alg=kdfAlg();return {salt,alg,hash:await kdf(salt,pw,alg)}}
+async function checkSecret(rec,pw){if(!rec||!rec.hash)return false;if(rec.alg==='pbkdf2'&&!(window.crypto&&crypto.subtle))return false;return (await kdf(rec.salt,pw,rec.alg||'sha-iter'))===rec.hash}
+// wrong-attempt lockout (per screen)
+function tooMany(){return S.waitUntil>Date.now()}
+function failOnce(){S.fails=(S.fails||0)+1;if(S.fails>=5){S.waitUntil=Date.now()+60000;S.fails=0}}
+function waitMsg(){return `入力の間違いが続いたため、${Math.ceil((S.waitUntil-Date.now())/1000)}秒待ってからもう一度入力してください。`}
 async function sha(text){
   const bytes=new TextEncoder().encode(text);
   if(window.crypto&&crypto.subtle){const buf=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')}
@@ -518,21 +535,49 @@ function sha256js(bytes){
   }
   return H.map(x=>x.toString(16).padStart(8,'0')).join('');
 }
-function unlockedHash(){if(S.unlocked)return S.unlocked;try{return localStorage.getItem('tennis.unlock')||''}catch(_){return ''}}
-function locked(){return !!S.settings.pwHash&&!S.admin&&unlockedHash()!==S.settings.pwHash}
+// 家庭ごとのログイン：お子さんを選んでパスワード。開くたびに入力（端末には記憶しない）
+function locked(){return !S.session}
+function famOf(key){return S.members.filter(m=>famKey(m._id)===key).map(m=>m._id)}
+function authOf(key){return S.auth.find(a=>a._id===key)}
 function renderLock(){
   document.body.classList.remove('wide');
   document.getElementById('top').innerHTML=`<span></span><h1>テニス部連絡ノート</h1><span></span>`;
   document.getElementById('nav').innerHTML='';
   document.getElementById('overlay').innerHTML='';
-  app.innerHTML=`<form class="card" data-form="unlock" style="margin-top:24px;align-items:center;text-align:center;gap:14px">
-    <span class="ball" style="width:44px;height:44px"></span>
-    <h2>ログイン</h2>
-    <p class="note">保護者に配られたパスワードを入力してください。</p>
-    <div class="field" style="width:100%;max-width:320px;text-align:left"><label for="lk-pw">パスワード</label><input id="lk-pw" type="password" autocomplete="current-password" data-draft="lk.pw" value="${esc(draft('lk.pw',''))}" autofocus></div>
-    ${S.lockErr?`<p class="note" style="color:var(--red)">${esc(S.lockErr)}</p>`:''}
-    <button class="btn primary" style="width:100%;max-width:320px;padding:12px">ひらく</button>
-    <p class="note">パスワードがわからないときは、管理担当の方に確認してください。</p></form>`;
+  const L=S.login,err=S.lockErr?`<p class="note" style="color:var(--red)">${esc(S.lockErr)}</p>`:'';
+  const wrap=(inner)=>`<section class="card" style="margin-top:24px;align-items:center;text-align:center;gap:14px"><span class="ball" style="width:44px;height:44px"></span>${inner}</section>`;
+  const fw='style="width:100%;max-width:320px;text-align:left"',bw='style="width:100%;max-width:320px;padding:12px"';
+  const pwf=(id,label,ac)=>`<div class="field" ${fw}><label for="${id}">${label}</label><input id="${id}" type="password" autocomplete="${ac}" data-draft="${id}" value="${esc(draft(id,''))}"></div>`;
+  const back=`<button class="link muted" data-act="loginBack">最初の画面にもどる</button>`;
+  let h;
+  if(S.offline){app.innerHTML=wrap('<h2>ログイン</h2><p class="note">共有データに接続できません。サインインした状態でこのページを開いてください。</p>');return}
+  if(L.step==='admin'){
+    const owner=S.isOwner,has=!!S.settings.adminHash;
+    h=wrap(`<h2>管理者画面</h2>`+(has
+      ?`<p class="note">管理者パスワードを入力してください。</p><form data-form="admin-enter" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">${pwf('ad-pw','管理者パスワード','current-password')}${err}<button class="btn primary" ${bw}>ひらく</button></form>`
+      :owner?`<p class="note">はじめに管理者パスワードを決めてください（8文字以上）。保護者には教えず、管理担当の方だけで共有してください。</p><form data-form="admin-set" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">${pwf('as-1','管理者パスワード','new-password')}${pwf('as-2','もう一度入力','new-password')}${err}<button class="btn primary" ${bw}>設定してひらく</button></form>`
+      :`<p class="note">管理者パスワードがまだ設定されていません。このアプリの作成者が最初に設定します。</p>`)+back);
+  }else if(L.step==='set'||L.step==='enter'){
+    const kids=famOf(L.key).map(name).join('・');
+    h=wrap(`<h2>${esc(kids)} の保護者</h2>`+(L.step==='set'
+      ?(S.invites.some(x=>x._id===L.key)
+        ?`<p class="note">はじめてのログインです。管理担当の方から受け取った<strong>登録コード</strong>を入れて、家庭のパスワード（6文字以上）を決めてください。</p>
+          <form data-form="login-set" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">
+          <div class="field" ${fw}><label for="ls-code">登録コード（6けた）</label><input id="ls-code" inputmode="numeric" autocomplete="one-time-code" data-draft="ls-code" value="${esc(draft('ls-code',''))}"></div>
+          ${pwf('ls-1','パスワード','new-password')}${pwf('ls-2','もう一度入力','new-password')}
+          ${err}<button class="btn primary" ${bw}>パスワードを設定してひらく</button></form>`
+        :`<p class="note">この家庭はまだ登録が済んでいません。管理担当の方に<strong>登録コード</strong>の発行を頼んでください。コードがないとパスワードを設定できません。</p>`)
+      :`<form data-form="login-enter" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">${pwf('le-pw','パスワード','current-password')}${err}<button class="btn primary" ${bw}>ひらく</button></form>
+        <p class="note">パスワードを忘れたときは、管理担当の方にリセットと登録コードの再発行を頼んでください。</p>`)+back);
+  }else{
+    h=wrap(`<h2>ログイン</h2><p class="note">お子さんの名前を選んでください。</p>
+      <form data-form="login-pick" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">
+      <div class="field" ${fw}><label for="lp-m">お子さん</label><select id="lp-m" data-draft="lp.m"><option value="">選んでください</option>${S.members.map(m=>`<option value="${esc(m._id)}"${draft('lp.m','')===m._id?' selected':''}>${esc(m.name)}</option>`).join('')}</select></div>
+      ${err}<button class="btn primary" ${bw}>つぎへ</button></form>
+      <p class="note">名前がないときは、管理担当の方に登録を頼んでください。</p>
+      <button class="link" data-act="adminLogin">管理者としてひらく</button>`);
+  }
+  app.innerHTML=h;
 }
 function render(){
   if(S.ready&&locked()){renderLock();return}
@@ -550,7 +595,7 @@ function render(){
   let h='';
   if(S.offline)h+='<div class="warn">共有データに接続できません。サインインした状態でこのページを開いてください。</div>';
   if(S.detail&&practice(S.detail))h+=viewDetail(practice(S.detail));
-  else{S.detail=null;h+=({home:viewHome,plan:viewPlan,ride:viewPlan,money:viewMoney,talk:viewTalk,record:viewRecord,me:viewMe,safety:viewSafety,admin:viewAdmin}[S.tab]||viewHome)()}
+  else{S.detail=null;if(S.tab==='admin'&&!S.admin)S.tab='home';h+=({home:viewHome,plan:viewPlan,ride:viewPlan,money:viewMoney,talk:viewTalk,record:viewRecord,me:viewMe,safety:viewSafety,admin:viewAdmin}[S.tab]||viewHome)()}
   app.innerHTML=h;
 }
 function renderOverlay(todo){
@@ -558,9 +603,9 @@ function renderOverlay(todo){
   document.body.classList.toggle('sheet-open',!!S.sheet);
   if(S.drawer){
     const items=[['home','home','ホーム'],['plan','plan','練習予定'],['goRide','car','送迎調整'],['talk','talk','連絡掲示板'],['money','money','費用管理'],['record','record','練習記録'],['safety','shield','緊急連絡・安全'],['me','person','マイページ・家族']];
-    if(S.admin)items.push(['admin','dash','管理者画面']);
+    items.push(['admin','dash','管理者画面']);
     h+=`<div class="drawer" data-act="closeOverlay"><nav class="in" aria-label="メニュー" data-stop="1"><div class="brand"><span class="ball"></span>テニス部連絡ノート</div>${items.map(([k,i,l])=>`<button class="navitem${S.tab===k?' on':''}" data-act="${k==='goRide'?'goRide':'tab'}" data-k="${k==='goRide'?'':k}">${ic(i)}${l}</button>`).join('')}
-      ${S.settings.pwHash&&!S.admin?`<button class="navitem" data-act="logout">${ic('back')}ログアウト</button>`:''}
+      <button class="navitem" data-act="logout">${ic('back')}ログアウト</button>
       <p class="note" style="padding:14px 12px 0">${S.family.length?esc(S.family.map(name).join('・'))+' の保護者として利用中':'マイページでお子さんを選んでください'}</p></nav></div>`;
   }
   if(S.bell)h+=`<div class="drawer" data-act="closeOverlay" style="background:transparent"></div><div class="card bellpanel" role="dialog" aria-label="お知らせ"><div class="sec-t" style="color:var(--green)">${ic('bell')}新着のお知らせ</div>${eventList(events().slice(0,15),S.bellSince)}<div class="sec-t red">${ic('alert')}未対応の項目</div>${todoList(todo)}</div>`;
@@ -917,12 +962,13 @@ function statsTable(withMoney){
 
 /* ----- マイページ ----- */
 function viewMe(){
-  let h=`<section class="card"><h2>わたしの家族（お子さん）</h2><p class="note">部員の中から、あなたのお子さんを選んでください。兄弟姉妹がいる場合は複数選べます。</p>`;
-  if(S.members.length)h+=`<div class="plist">${S.members.map(m=>`<label class="prow check" style="align-items:center"><input type="checkbox" data-act-change="fam" value="${esc(m._id)}" ${isMine(m._id)?'checked':''}> ${av(m._id)}<span class="grow"><strong>${esc(m.name)}</strong> <span class="small muted">${m.parent?esc(m.parent)+'さん':''}</span></span></label>`).join('')}</div>`;
-  h+=`<form class="fgrid" data-form="member"><h3 class="wide">名前がない場合は登録</h3>
-    <div class="field"><label for="nm-name">選手名</label><input id="nm-name" data-draft="nm.name" value="${esc(draft('nm.name',''))}" placeholder="例：山田 太郎"></div>
-    <div class="field"><label for="nm-parent">保護者名（任意）</label><input id="nm-parent" data-draft="nm.parent" value="${esc(draft('nm.parent',''))}" placeholder="例：山田 花子"></div>
-    <div class="actions wide"><button class="btn sm primary">登録して家族に追加</button></div></form></section>`;
+  if(S.session==='admin')return `<section class="card"><h2>管理者としてひらいています</h2><p class="note">お子さんの家庭としてログインしていないため、参加登録や支払いの記録はできません。家庭として使うときは「☰」→「ログアウト」から、お子さんを選んでログインしてください。</p></section>`;
+  let h=`<section class="card"><h2>わたしの家族（お子さん）</h2><div class="plist">${S.family.map(m=>`<div class="prow">${av(m)}<span class="grow"><strong>${esc(name(m))}</strong> <span class="small muted">${mem(m)?.parent?esc(mem(m).parent)+'さん':''}</span></span></div>`).join('')}</div>`;
+  h+=`<form class="fgrid" data-form="member"><h3 class="wide">兄弟姉妹を追加</h3>
+    <div class="field"><label for="nm-name">お子さんの名前</label><input id="nm-name" data-draft="nm.name" value="${esc(draft('nm.name',''))}" placeholder="例：山田 次郎"></div>
+    <div class="field"><label for="nm-parent">保護者名（任意）</label><input id="nm-parent" data-draft="nm.parent" value="${esc(draft('nm.parent',mem(S.family[0])?.parent||''))}"></div>
+    <div class="actions wide"><button class="btn sm primary">家族に追加</button></div></form>
+    <p class="note">同じパスワードで、兄弟姉妹の参加登録もまとめてできます。すでに名簿にいる兄弟姉妹を家族にまとめたいときは、管理担当の方に頼んでください。</p></section>`;
   if(S.family.length){
     const ps=monthPractices().filter(p=>p.status!=='cancelled');const due=Math.max(0,-Math.round(myBal(S.month)?.bal||0));
     h+=`<section class="card"><h2>${monthLabel(S.month)}のわが家</h2><div class="plist">${S.family.map(m=>{const d=ps.filter(p=>resp(p._id,m)?.attend==='yes');return `<div class="prow">${av(m)}<div class="grow"><strong>${esc(name(m))}</strong><div class="small muted">参加 ${d.length}日${d.length?'：'+d.map(p=>mdw(p.date)).join('、'):''}</div></div></div>`}).join('')}</div>
@@ -938,7 +984,7 @@ function viewAdmin(){
   const cnt=p=>{const r=S.responses.filter(x=>x.practiceId===p._id&&mem(x.memberId)&&x.attend==='yes');return {y:r.length,w:r.filter(x=>x.walkIn).length,o:S.members.length-r.length}};
   const nc=next?cnt(next):null;
   const unpaid=unpaidFamilies(S.month).size;
-  const side=[['a-dash','dash','ダッシュボード'],['a-plan','plan','予定管理'],['a-att','check','参加管理'],['a-ride','car','送迎調整'],['a-money','money','費用管理'],['a-talk','talk','連絡掲示板'],['a-rec','record','練習記録'],['a-mem','users','メンバー管理'],['a-set','gear','設定'],['a-pw','shield','パスワード']];
+  const side=[['a-dash','dash','ダッシュボード'],['a-plan','plan','予定管理'],['a-att','check','参加管理'],['a-ride','car','送迎調整'],['a-money','money','費用管理'],['a-talk','talk','連絡掲示板'],['a-rec','record','練習記録'],['a-mem','users','メンバー管理'],['a-set','gear','設定'],['a-pw','shield','ログイン']];
   let h=`<div class="admin"><nav class="side" aria-label="管理メニュー"><div class="row" style="padding:6px 10px 10px;font-weight:900"><span class="ball"></span>テニス部連絡ノート</div>${side.map(([id,i,l])=>`<button class="navitem" data-act="jump" data-k="${id}">${ic(i)}${l}</button>`).join('')}</nav><div class="main">`;
   h+=`<section class="card" id="a-dash"><h2>ダッシュボード</h2><div class="kpis">
     <div class="card kpi" style="box-shadow:none"><span class="ic g">${ic('clock')}</span><div><div class="small muted">次回の練習</div><div class="v">${next?mdw(next.date):'—'}</div>${next?`<div class="small muted">${esc(next.place)}</div>`:''}</div></div>
@@ -958,7 +1004,12 @@ function viewAdmin(){
   h+=`<section class="card" id="a-talk"><div class="row between"><h2>重要連絡の確認状況</h2><button class="btn sm primary" data-act="sheet" data-k="post">${ic('plus')}連絡を投稿</button></div>`+(imp.length?`<div class="lines">${imp.map(p=>{const ok=new Set(S.reads.filter(x=>x.postId===p._id&&x.confirmed&&mem(x.memberId)).map(x=>famKey(x.memberId)));const all=[...new Set(S.members.map(m=>m.family||m._id))];const ng=all.filter(k=>!ok.has(k));return `<div class="line"><div><strong>${esc(p.title)}</strong><div class="sub">確認 ${ok.size}/${all.length}家庭${ng.length?' ・ 未確認：'+ng.map(k=>esc(famLabel(k))).join('、'):''}</div></div></div>`}).join('')}</div><p class="note">未確認の家庭には電話などで連絡してください。</p>`:'<p class="note">重要連絡はまだありません。</p>')+`</section>`;
   const recN=S.practices.filter(p=>p.record).length,noRec=S.practices.filter(p=>p.date<today()&&p.status!=='cancelled'&&!p.record).length;
   h+=`<section class="card" id="a-rec"><h2>練習記録</h2><p class="note">記録あり ${recN}件 ・ 記録のない終わった練習 ${noRec}件</p><button class="btn sm outline" data-act="tab" data-k="record" style="align-self:flex-start">練習記録を開く</button></section>`;
-  h+=`<section class="card" id="a-mem"><h2>メンバー管理</h2>`;
+  h+=`<section class="card" id="a-mem"><h2>メンバー管理</h2>
+    <form data-form="member-admin" class="fgrid"><h3 class="wide">選手の登録</h3>
+      <div class="field"><label for="ma-name">選手名</label><input id="ma-name" data-draft="ma.name" value="${esc(draft('ma.name',''))}" placeholder="例：山田 太郎"></div>
+      <div class="field"><label for="ma-parent">保護者名</label><input id="ma-parent" data-draft="ma.parent" value="${esc(draft('ma.parent',''))}" placeholder="例：山田 花子"></div>
+      <div class="field wide"><label for="ma-fam">家庭</label><select id="ma-fam" data-draft="ma.fam"><option value="">新しい家庭</option>${[...new Set(S.members.map(m=>famKey(m._id)))].map(k=>`<option value="${esc(k)}"${draft('ma.fam','')===k?' selected':''}>${esc(famOf(k).map(name).join('・'))}の兄弟姉妹</option>`).join('')}</select></div>
+      <div class="actions wide"><button class="btn sm primary">登録する</button></div></form>`;
   if(S.members.length){
     h+=`<div class="scroll"><table><thead><tr><th>選手名</th><th>保護者名</th><th>家族</th><th class="num">通算参加</th><th></th></tr></thead><tbody>`;
     for(const m of S.members){
@@ -978,14 +1029,15 @@ function viewAdmin(){
     <div class="field wide"><label for="st-proc">緊急時の手順</label><textarea id="st-proc" data-draft="st.procedure" placeholder="例：1. けがをしたら練習を止める 2. 責任者に連絡 3. 保護者へ電話">${esc(draft('st.procedure',s.procedure||''))}</textarea></div></div>
     <p class="note">連絡先はこのページを開ける全員に表示されます。個人の電話番号は本人の了承を取ってから載せてください。</p>
     <div class="actions"><button class="btn sm primary">保存する</button></div></form>`;
-  h+=`<form class="card" id="a-pw" data-form="password"><h2>ログイン用パスワード</h2>
-    <p class="note">${s.pwHash?`<span class="pill">設定あり</span> ${s.pwSetAt?stamp(s.pwSetAt)+'に設定':''}　保護者はこのページを開くとパスワードを聞かれます。`:'<span class="pill grey">設定なし</span>　設定すると、保護者はこのページを開くときにパスワードが必要になります。'}</p>
-    <div class="fgrid">
-      <div class="field"><label for="pw1">${s.pwHash?'新しいパスワード':'パスワード'}（4文字以上）</label><input id="pw1" type="password" autocomplete="new-password" data-draft="pw.1" value="${esc(draft('pw.1',''))}"></div>
-      <div class="field"><label for="pw2">もう一度入力</label><input id="pw2" type="password" autocomplete="new-password" data-draft="pw.2" value="${esc(draft('pw.2',''))}"></div>
-    </div>
-    <p class="note">変更すると、全員がもう一度入力する必要があります。管理担当（Editor）はパスワードなしで開けます。パスワードは保護者にLINEなどで伝えてください。</p>
-    <div class="actions">${s.pwHash?(S.confirm==='pwclear'?`<button type="button" class="btn sm danger" data-act="pwClear">本当にパスワードをなくす</button>`:`<button type="button" class="link muted" data-act="confirm" data-k="pwclear">パスワードをなくす</button>`):''}<button class="btn sm primary">${s.pwHash?'変更する':'設定する'}</button></div></form>`;
+  const fams=[...new Set(S.members.map(m=>famKey(m._id)))];
+  h+=`<section class="card" id="a-pw"><h2>ログインとパスワード</h2>
+    <p class="note">保護者は、お子さんを選んで、<strong>登録コード</strong>を入れてはじめのパスワードを決めます。登録コードは家庭ごとに1回だけ使えて、使うと消えます。コードは本人に直接（個別のLINEや手渡し）伝えてください。グループには流さないでください。</p>
+    ${fams.length?`<div class="lines">${fams.map(k=>{const a=authOf(k),inv=S.invites.find(x=>x._id===k),code=S.codes[k];return `<div class="line" style="align-items:center"><div><strong>${esc(famOf(k).map(name).join('・'))}</strong><div class="sub">${a?'パスワード設定済み'+(a.setAt?'（'+stamp(a.setAt)+'）':''):inv?'登録コード発行済み・まだ設定していません':'未登録（登録コードが必要）'}</div>${code?`<div style="margin-top:4px">登録コード：<strong style="font-size:20px;letter-spacing:.15em">${code}</strong> <span class="small muted">（この画面を閉じると再表示できません）</span></div>`:''}</div>
+      <div class="row">${a?(S.confirm==='pwr:'+k?`<button class="btn sm danger" data-act="pwReset" data-k="${esc(k)}">本当にリセット</button>`:`<button class="link muted" data-act="confirm" data-k="pwr:${esc(k)}">パスワードをリセット</button>`):`<button class="btn sm primary" data-act="issueCode" data-k="${esc(k)}">${inv?'コードを再発行':'登録コードを発行'}</button>`}</div></div>`}).join('')}</div>`:'<p class="note">まだ家庭がありません。下の「選手の登録」から登録してください。</p>'}
+    <form data-form="admin-change" class="fgrid"><h3 class="wide">管理者パスワードの変更</h3>
+      <div class="field"><label for="ac-1">新しい管理者パスワード（8文字以上）</label><input id="ac-1" type="password" autocomplete="new-password" data-draft="ac-1" value=""></div>
+      <div class="field"><label for="ac-2">もう一度入力</label><input id="ac-2" type="password" autocomplete="new-password" data-draft="ac-2" value=""></div>
+      <div class="actions wide"><button class="btn sm primary">変更する</button></div></form></section>`;
   return h+'</div></div>';
 }
 
@@ -1022,6 +1074,11 @@ function sheetBody(){
       :`<div class="field wide"><label for="rg-pick">乗る場所</label><input id="rg-pick" data-draft="rg.pickup" value="${esc(draft('rg.pickup',r.pickup||''))}" placeholder="例：○○小学校前"></div>`}
       <p class="note wide">お子さんは「参加」で登録されます。住所や電話番号は書かず、待ち合わせ場所だけを書いてください。</p>
       <div class="actions wide">${r.transport===(k==='driver'?'can':'cannot')?`<button type="button" class="btn danger" data-act="unregister" data-p="${p._id}" data-m="${m0}">登録を取り消す</button>`:''}${close}<button class="btn primary">登録する</button></div></form>`;
+  }
+  if(k==='adminAuth'){
+    return `<form data-form="admin-reauth" class="fgrid"><h2 class="wide">管理者画面</h2>
+      ${S.settings.adminHash?`<div class="field wide"><label for="ar-pw">管理者パスワード</label><input id="ar-pw" type="password" autocomplete="current-password" data-draft="ar-pw" value=""></div>
+      <div class="actions wide">${close}<button class="btn primary">ひらく</button></div>`:`<p class="note wide">管理者パスワードがまだ設定されていません。ログアウトして「管理者としてひらく」から、作成者が設定してください。</p><div class="actions wide">${close}</div>`}</form>`;
   }
   if(k==='share'){
     return `<h2>${esc(c.title)}</h2>
@@ -1130,7 +1187,7 @@ document.addEventListener('click',async e=>{
   if(a==='closeOverlay'&&b!==e.target)return;
   if(a!=='confirm'&&!a.startsWith('del')&&a!=='payAll')S.confirm=null;
   switch(a){
-    case 'tab':go(k);if(k==='talk')markRead();break;
+    case 'tab':if(k==='admin'&&!S.admin){S.drawer=false;openSheet('adminAuth',{});break}go(k);if(k==='talk')markRead();break;
     case 'drawer':S.drawer=true;S.bell=false;break;
     case 'bell':S.bell=!S.bell;S.drawer=false;if(S.bell){S.bellSince=S.seenAt;saveSeen()}break;
     case 'closeOverlay':S.drawer=false;S.bell=false;if(S.sheet)closeSheet();break;
@@ -1175,9 +1232,12 @@ document.addEventListener('click',async e=>{
     case 'rideDecline':await write(()=>col('rides').doc(r).update({status:'declined',updatedAt:Date.now()}));break;
     case 'rideUndo':await write(()=>col('rides').doc(r).delete(),'送迎の決定を取り消しました');break;
     case 'rideDel':await write(()=>col('rides').doc(r).delete(),'依頼を取り消しました');break;
-    case 'pwClear':{S.confirm=null;if(!S.admin)break;const rest={...S.settings};delete rest.pwHash;delete rest.pwSalt;delete rest.pwSetAt;await write(()=>S.db.doc('settings/app').set(rest),'パスワードをなくしました');break}
-    case 'copyShare':{const t=String(draft('sh.text',S.ctx.text||''));try{await navigator.clipboard.writeText(t);toast('コピーしました。LINEに貼り付けてください')}catch(_){const el=document.getElementById('sh-text');if(el){el.focus();el.select()}toast('文章を選択しました。長押しでコピーしてください')}return}
-    case 'logout':S.unlocked='';try{localStorage.removeItem('tennis.unlock')}catch(_){}S.drawer=false;break;
+    case 'pwReset':{S.confirm=null;if(!S.admin)break;await write(()=>col('auth').doc(k).delete(),'リセットしました。登録コードを発行して保護者に伝えてください');break}
+    case 'logout':S.admin=false;S.session=null;S.family=[];S.login={step:'pick'};S.lockErr='';S.drawer=false;closeSheet();S.tab='home';S.detail=null;break;
+    case 'loginBack':S.login={step:'pick'};S.lockErr='';clearDrafts('ls.');clearDrafts('le.');break;
+    case 'adminLogin':S.login={step:'admin'};S.lockErr='';break;
+    case 'issueCode':{if(!S.admin)break;const code=String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000);const sec=await makeSecret(code);
+      if(await write(()=>col('invites').doc(k).set({...sec,createdAt:Date.now()}))){S.codes={...(S.codes||{}),[k]:code};toast('登録コードを発行しました')}break}
     case 'settle':{
       S.confirm=null;
       const o=transfers(S.month)[Number(k)];if(!o)break;
@@ -1219,10 +1279,10 @@ document.addEventListener('submit',async e=>{
   const f=e.target,kind=f.dataset.form,c=S.ctx;
   const T=k=>String(draft(k,'')??'').trim();
   if(kind==='member'){
-    const n=T('nm.name');if(!n){toast('選手名を入力してください');return}
-    if(!S.db){toast('共有データに接続できないため保存できません。');return}
+    const n=T('nm.name');if(!n){toast('お子さんの名前を入力してください');return}
+    if(!S.session||S.session==='admin'){toast('家庭としてログインしてから追加してください');return}
     const ref=col('members').doc();
-    if(await write(()=>ref.set({name:n,parent:T('nm.parent'),createdAt:Date.now()}),n+'さんを登録しました')){clearDrafts('nm.');await setFamily([...S.family,ref.id])}
+    if(await write(()=>ref.set({name:n,parent:T('nm.parent')||mem(S.family[0])?.parent||'',family:S.session,createdAt:Date.now()}),n+'さんを家族に追加しました')){clearDrafts('nm.');S.family=[...S.family,ref.id]}
   }
   if(kind==='practice'){
     const base=c.base||{};const g=x=>String(draft('pf.'+x,base[x]??'')??'').trim();
@@ -1303,19 +1363,61 @@ document.addEventListener('submit',async e=>{
     const data={round:Number(draft('st.round',s.round||10)),leader:String(draft('st.leader',s.leader||'')).trim(),contact:String(draft('st.contact',s.contact||'')).trim(),procedure:String(draft('st.procedure',s.procedure||'')).trim()};
     if(await write(()=>S.db.doc('settings/app').set({...S.settings,...data}),'保存しました'))clearDrafts('st.');
   }
-  if(kind==='password'){
-    if(!S.admin)return;
-    const p1=String(draft('pw.1','')),p2=String(draft('pw.2',''));
-    if(p1.length<4){toast('パスワードは4文字以上にしてください');return}
-    if(p1!==p2){toast('2回入力したパスワードが違います');return}
-    const salt=[...crypto.getRandomValues(new Uint8Array(12))].map(b=>b.toString(16).padStart(2,'0')).join('');
-    const pwHash=await sha(salt+':'+p1);
-    if(await write(()=>S.db.doc('settings/app').set({...S.settings,pwSalt:salt,pwHash,pwSetAt:Date.now()}),'パスワードを設定しました'))clearDrafts('pw.');
+  if(kind==='login-pick'){
+    const m=draft('lp.m','');if(!m){S.lockErr='お子さんを選んでください。';render();return}
+    const key=famKey(m);S.lockErr='';S.login={step:authOf(key)?'enter':'set',key};
   }
-  if(kind==='unlock'){
-    const h=await sha((S.settings.pwSalt||'')+':'+String(draft('lk.pw','')));
-    if(h===S.settings.pwHash){S.unlocked=h;S.lockErr='';clearDrafts('lk.');try{localStorage.setItem('tennis.unlock',h)}catch(_){}}
-    else S.lockErr='パスワードが違います。';
+  if(kind==='login-set'){
+    const key=S.login.key,inv=S.invites.find(x=>x._id===key);
+    const code=String(draft('ls-code','')).trim(),p1=String(draft('ls-1','')),p2=String(draft('ls-2',''));
+    if(tooMany())S.lockErr=waitMsg();
+    else if(p1.length<6)S.lockErr='パスワードは6文字以上にしてください。';
+    else if(p1!==p2)S.lockErr='2回入力したパスワードが違います。';
+    else if(!inv||!(await checkSecret(inv,code))){failOnce();S.lockErr='登録コードが違います。管理担当の方に確認してください。'}
+    else{
+      const cur=await col('auth').doc(key).get();
+      if(cur.exists){S.lockErr='この家庭のパスワードはすでに設定されています。';S.login={step:'enter',key}}
+      else{const sec=await makeSecret(p1);
+        if(await write(()=>col('auth').doc(key).set({...sec,setAt:Date.now()}),'パスワードを設定しました')){await write(()=>col('invites').doc(key).delete());S.fails=0;loginAs(key)}}
+    }
+    clearDrafts('ls-');
+  }
+  if(kind==='login-enter'){
+    const key=S.login.key;
+    if(tooMany())S.lockErr=waitMsg();
+    else if(await checkSecret(authOf(key),String(draft('le-pw','')))){S.fails=0;loginAs(key)}
+    else{failOnce();S.lockErr='パスワードが違います。'}
+    clearDrafts('le-');
+  }
+  if(kind==='admin-set'){
+    const p1=String(draft('as-1','')),p2=String(draft('as-2',''));
+    if(!S.isOwner)S.lockErr='管理者パスワードを最初に設定できるのは、このアプリの作成者だけです。';
+    else if(S.settings.adminHash)S.lockErr='管理者パスワードはすでに設定されています。';
+    else if(p1.length<8)S.lockErr='管理者パスワードは8文字以上にしてください。';
+    else if(p1!==p2)S.lockErr='2回入力したパスワードが違います。';
+    else{const sec=await makeSecret(p1);if(await write(()=>S.db.doc('settings/app').set({...S.settings,adminSalt:sec.salt,adminAlg:sec.alg,adminHash:sec.hash}),'管理者パスワードを設定しました'))adminIn()}
+    clearDrafts('as-');
+  }
+  if(kind==='admin-enter'||kind==='admin-reauth'){
+    const s2=S.settings,pw=String(draft(kind==='admin-enter'?'ad-pw':'ar-pw',''));
+    if(tooMany()){S.lockErr=waitMsg();if(kind==='admin-reauth')toast(S.lockErr)}
+    else if(await checkSecret({salt:s2.adminSalt,alg:s2.adminAlg,hash:s2.adminHash},pw)){S.fails=0;closeSheet();adminIn()}
+    else{failOnce();S.lockErr='管理者パスワードが違います。';if(kind==='admin-reauth')toast(S.lockErr)}
+    clearDrafts('ad-');clearDrafts('ar-');
+  }
+  if(kind==='admin-change'){
+    const p1=String(draft('ac-1','')),p2=String(draft('ac-2',''));
+    if(!S.admin)return;
+    if(p1.length<8){toast('管理者パスワードは8文字以上にしてください');return}
+    if(p1!==p2){toast('2回入力したパスワードが違います');return}
+    const sec=await makeSecret(p1);
+    if(await write(()=>S.db.doc('settings/app').set({...S.settings,adminSalt:sec.salt,adminAlg:sec.alg,adminHash:sec.hash}),'管理者パスワードを変更しました'))clearDrafts('ac-');
+  }
+  if(kind==='member-admin'){
+    if(!S.admin)return;
+    const n=T('ma.name');if(!n){toast('選手名を入力してください');return}
+    const ref=col('members').doc();const sib=draft('ma.fam','');
+    if(await write(()=>ref.set({name:n,parent:T('ma.parent'),family:sib||ref.id,createdAt:Date.now()}),n+'さんを登録しました'))clearDrafts('ma.');
   }
   S.pendingRender=false;render();
 });
@@ -1343,30 +1445,30 @@ function shrink(file){
     img.src=url;
   });
 }
+function adminIn(){S.admin=true;S.lockErr='';S.login={step:'pick'};if(!S.session){S.session='admin';S.family=[]}S.tab='admin';S.detail=null}
+function loginAs(key){S.session=key;S.family=famOf(key);S.lockErr='';S.login={step:'pick'};S.tab='home';S.detail=null;saveSeenIfFirst()}
+function saveSeenIfFirst(){if(!S.seenAt)saveSeen()}
 async function setFamily(ids){
   S.family=ids.filter((x,i)=>ids.indexOf(x)===i);
-  try{localStorage.setItem('tennis.family',JSON.stringify(S.family))}catch(_){}
-  if(S.db&&S.uid){try{await S.db.doc('data/users/'+S.uid+'/profile').set({memberIds:S.family})}catch(_){}}
   const head=S.family[0];
   if(head&&S.db)for(const id of S.family){const m=mem(id);if(m&&m.family!==head){try{await col('members').doc(id).update({family:head})}catch(_){}}}
 }
 
 /* ---------- boot ---------- */
 try{S.seenAt=Number(localStorage.getItem('tennis.seenAt')||0)}catch(_){}
-try{const t=localStorage.getItem('tennis.tab');if(t&&TITLES[t])S.tab=t;const f=JSON.parse(localStorage.getItem('tennis.family')||'[]');if(Array.isArray(f))S.family=f}catch(_){}
+try{localStorage.removeItem('tennis.family');localStorage.removeItem('tennis.unlock')}catch(_){}
 render();
 (async()=>{
   const claude=window.claude;
   const [db,user,assets]=claude?await Promise.all([claude.use('db'),claude.use('user'),claude.use('assets')]):[null,null,null];
   S.db=db;S.user=user;S.assets=assets;
-  if(user){S.admin=await user.canEdit();S.uid=await user.id()}
+  if(user){S.canEdit=await user.canEdit();S.isOwner=await user.isOwner();S.uid=await user.id()}
   if(S.tab==='admin'&&!S.admin)S.tab='home';
   if(!db){S.ready=true;S.offline=true;render();return}
-  if(S.uid){try{const s=await db.doc('data/users/'+S.uid+'/profile').get();if(s.exists&&Array.isArray(s.data().memberIds))S.family=s.data().memberIds.slice()}catch(_){}}
   const map=snap=>snap.docs.map(d=>({...d.data(),_id:d.id}));
-  const keys=['members','practices','responses','rides','payments','costs','posts','comments','reads','likes'];
+  const keys=['members','practices','responses','rides','payments','costs','posts','comments','reads','likes','auth','invites'];
   const seen=new Set();let first=true;
-  const done=()=>{if(seen.size>=keys.length+1){notifyArrivals();if(first){first=false;S.family=S.family.filter(id=>mem(id))}S.ready=true;scheduleRender()}};
+  const done=()=>{if(seen.size>=keys.length+1){if(S.session&&S.session!=='admin')S.family=famOf(S.session);notifyArrivals();S.ready=true;scheduleRender()}};
   const onErr=err=>{if(err.code!=='revoked')toast('データの受信が止まりました。ページを開き直してください。')};
   for(const k of keys)col(k).onSnapshot(snap=>{S[k]=map(snap);if(k==='members')S.members.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));seen.add(k);done()},onErr);
   db.doc('settings/app').onSnapshot(s=>{S.settings=s.exists?s.data():{};seen.add('settings');done()},onErr);

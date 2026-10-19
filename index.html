@@ -381,14 +381,20 @@ function shareItems(m){
   }
   return items.sort((a,b)=>a.date.localeCompare(b.date));
 }
-function paidFor(it,mid){
-  return S.payments.filter(x=>x.memberId===mid&&(it.costId?x.costId===it.costId:(x.practiceId===it.practiceId&&!x.costId))).reduce((s,x)=>s+Number(x.amount||0),0);
-}
+// 立替: someone pays the court (or shop) in full; to '' and not a settlement
+function upfront(it){return S.payments.filter(x=>!x.to&&!x.settle&&(it.costId?x.costId===it.costId:(x.practiceId===it.practiceId&&!x.costId)))}
+function courtPaid(pid){return S.payments.filter(x=>x.practiceId===pid&&!x.to&&!x.settle&&!x.costId)}
+function payMonth(x){return x.month||(x.date||'').slice(0,7)}
 function ledger(m){
   const L={};S.members.forEach(x=>L[x._id]={owe:0,paid:0,recv:0});
   const items=shareItems(m);
-  for(const it of items)for(const id of it.ids)if(L[id])L[id].owe+=it.share;
-  for(const x of S.payments.filter(x=>inMonth(x.date,m))){
+  for(const it of items){
+    for(const id of it.ids)if(L[id])L[id].owe+=it.share;
+    // rounding surplus goes to whoever paid upfront, so the month nets to zero
+    const first=upfront(it)[0];const extra=it.share*it.ids.length-it.amount;
+    if(first&&extra>0&&L[first.memberId])L[first.memberId].paid+=extra;
+  }
+  for(const x of S.payments.filter(x=>payMonth(x)===m)){
     const a=Number(x.amount||0);
     if(L[x.memberId])L[x.memberId].paid+=a;
     if(x.to&&L[x.to])L[x.to].recv+=a;
@@ -396,30 +402,32 @@ function ledger(m){
   for(const k in L)L[k].bal=L[k].paid-L[k].recv-L[k].owe;
   return {L,items};
 }
-function familyBill(m){
-  // rows for my family: one per item where any of my children owes
-  const items=shareItems(m);const rows=[];
-  for(const it of items){
-    const kids=S.family.filter(id=>it.ids.includes(id));
-    if(!kids.length)continue;
-    const due=kids.reduce((s,id)=>s+Math.max(0,it.share-paidFor(it,id)),0);
-    rows.push({it,kids,amount:it.share*kids.length,due,paid:due<=0});
-  }
-  return rows;
+function famBalances(m){
+  const {L}=ledger(m);const F={};
+  for(const x of S.members){const k=famKey(x._id);F[k]=F[k]||{owe:0,paid:0,recv:0,bal:0};for(const f of ['owe','paid','recv','bal'])F[k][f]+=L[x._id][f]}
+  return F;
 }
-function unpaidFamilies(m){
-  const items=shareItems(m);const bad=new Set();
-  for(const it of items)for(const id of it.ids)if(paidFor(it,id)<it.share)bad.add(famKey(id));
-  return bad;
+function transfers(m){
+  // who pays whom at month end: largest debts to largest credits
+  const F=famBalances(m);
+  const cr=Object.keys(F).filter(k=>F[k].bal>0.5).map(k=>({k,need:F[k].bal})).sort((a,b)=>b.need-a.need);
+  const dr=Object.keys(F).filter(k=>F[k].bal<-0.5).map(k=>({k,owe:-F[k].bal})).sort((a,b)=>b.owe-a.owe);
+  const out=[];
+  for(const d of dr){let left=d.owe;for(const c of cr){if(left<0.5)break;if(c.need<0.5)continue;const a=Math.min(left,c.need);out.push({from:d.k,to:c.k,amount:Math.round(a)});c.need-=a;left-=a}}
+  return out.filter(o=>o.amount>0);
 }
+function unpaidFamilies(m){const F=famBalances(m);return new Set(Object.keys(F).filter(k=>F[k].bal<-0.5))}
+function myBal(m){if(!S.family.length)return null;return famBalances(m)[famKey(S.family[0])]||null}
 
 /* ---------- todo / notices ---------- */
 function todoItems(){
   const t=[];
   const asks=S.rides.filter(r=>r.status==='open'&&r.toId&&isMine(r.toId)&&practice(r.practiceId)?.date>=today());
   for(const r of asks)t.push({text:`${md(practice(r.practiceId).date)} ${name(r.fromId)}さんから送迎のお願いが届いています`,act:'goRide',p:r.practiceId});
-  const unpaid=familyBill(S.month).filter(r=>!r.paid);
-  if(unpaid.length)t.push({text:`${mnum(S.month)}分の${unpaid.some(r=>r.it.kind==='コート代')?'コート代':'費用'}に未精算があります`,act:'goMoney'});
+  for(const m of [shiftMonth(ym(new Date()),-1),ym(new Date())]){
+    const b=myBal(m);
+    if(b&&b.bal<-0.5)t.push({text:`${mnum(m)}分のコート代の精算が残っています（${yen(-b.bal)}）`,act:'goMoney',k:m});
+  }
   for(const p of S.posts.filter(p=>p.level!=='normal'&&!confirmed(p._id)))t.push({text:`重要連絡「${p.title}」を確認してください`,act:'goTalk',k:'important'});
   return S.family.length?t:[];
 }
@@ -563,7 +571,8 @@ function detailSummary(p){
   const yes=attendees(p._id);
   let h=facts(p,true);
   if(cx)h+=`<div class="notice red"><div class="t">${ic('alert')}中止</div><p>${esc(p.cancelReason||'理由の記載なし')}</p></div>`;
-  if(p.fee&&yes.length)h+=`<p class="note">いまの参加者 ${yes.length}名で割ると、1人 ${yen(roundUp(p.fee/yes.length))}（${S.settings.round||10}円単位で切り上げ）</p>`;
+  if(p.fee&&yes.length)h+=`<p class="note">いまの参加者 ${yes.length}名で割ると、1人 ${yen(roundUp(p.fee/yes.length))}（${S.settings.round||10}円単位で切り上げ）。月末にまとめて精算します。</p>`;
+  if(p.fee&&!cx){const cp=courtPaid(p._id);h+=cp.length?`<p class="note">コート代を払った人：${cp.map(x=>`<strong>${esc(famLabel(x.memberId))}</strong>（${yen(x.amount)}）${S.admin||mineFam(x.memberId)?` <button class="link muted" data-act="delPay" data-r="${x._id}">取り消す</button>`:''}`).join('、')}</p>`:'<p class="note" style="color:var(--red)">コート代を払った人はまだ記録されていません。</p>'}
   if(!cx){
     const drv=S.responses.filter(r=>r.practiceId===p._id&&r.attend==='yes'&&r.transport==='can');
     const need=S.responses.filter(r=>r.practiceId===p._id&&r.attend==='yes'&&r.transport==='cannot');
@@ -573,7 +582,7 @@ function detailSummary(p){
   const hist=p.history||[];
   if(hist.length)h+=`<details><summary>変更履歴（${hist.length}件）</summary><ul>${hist.slice().reverse().map(x=>`<li>${stamp(x.at)} ${esc(x.text)}</li>`).join('')}</ul></details>`;
   h+=`<div class="row">
-    ${S.family.length&&!cx&&p.fee?`<button class="btn sm" data-act="sheet" data-k="pay" data-p="${p._id}">コート代を立て替えた</button>`:''}
+    ${S.family.length&&!cx&&p.fee&&!courtPaid(p._id).length?`<button class="btn sm primary" data-act="sheet" data-k="pay" data-p="${p._id}">コート代を払った</button>`:''}
     ${p.date<=today()&&!cx?`<button class="btn sm" data-act="sheet" data-k="record" data-p="${p._id}">${p.record?'練習記録を編集':'練習記録を書く'}</button>`:''}
     <button class="btn sm" data-act="sheet" data-k="practice" data-p="${p._id}">編集</button>
     <button class="btn sm" data-act="sheet" data-k="dup" data-p="${p._id}">複製</button>
@@ -673,33 +682,51 @@ function viewMoney(){
 }
 function moneyMonth(){
   const items=shareItems(S.month);
-  const rows=familyBill(S.month);
-  const total=rows.reduce((s,r)=>s+r.amount,0),due=rows.reduce((s,r)=>s+r.due,0);
-  let h=`<div class="row between"><h2>${mnum(S.month)}の精算</h2>${due>0?'<span class="pill orange">未精算あり</span>':rows.length?'<span class="pill">精算済み</span>':''}</div>`;
-  h+=items.length?`<div class="lines">${items.map(it=>`<div class="line"><div><div>・${esc(it.label)}</div><div class="sub">${esc(it.sub)}</div></div><span class="amt">${yen(it.amount)}</span></div>`).join('')}</div>`:'<p class="note">今月の費用はまだありません。コート代のある練習や、ボール代などを登録するとここに出ます。</p>';
-  if(!S.family.length)return h;
-  h+=`<div class="bill${due>0||!rows.length?'':' ok'}"><span class="l">ご家庭の請求額</span><span class="v">${Math.round(total).toLocaleString('ja-JP')}<small>円</small></span>${due>0&&due!==total?`<span class="note" style="text-align:right">うち未払い ${yen(due)}</span>`:''}</div>`;
-  if(rows.length){
-    h+=`<h3>支払い状況</h3><div class="paystate"><button class="unpaid${due>0?' on':''}" disabled>未払い</button><button class="paid${due<=0?' on':''}" ${due>0?'data-act="confirm" data-k="payall"':'disabled'}>支払い済み</button></div>`;
-    if(S.confirm==='payall')h+=`<div class="warn">${yen(due)}をすべて支払い済みとして記録しますか？ <button class="btn sm primary" data-act="payAll">記録する</button> <button class="link muted" data-act="confirm" data-k="">やめる</button></div>`;
-    const days=rows.filter(r=>r.it.practiceId&&!r.it.costId).length;
-    h+=`<h3>${mnum(S.month)}の参加履歴（${days}回）</h3><div class="lines">${rows.map(r=>`<div class="line" style="align-items:center"><div>${md(r.it.date)} <span class="small muted">${r.it.costId?esc(r.it.kind):'コート代'}${S.family.length>1?' ・ '+r.kids.map(name).join('・'):''}</span></div><div class="row" style="gap:10px"><span class="amt">${yen(r.amount)}</span>${r.paid?'<span class="pill">支払い済み</span>':`<button class="pill red" style="border:0" data-act="payItem" data-k="${r.it.key}">未払い</button>`}</div></div>`).join('')}</div>
-      <p class="note">「未払い」を押すと、その日の分を支払い済みとして記録します。</p>`;
+  const tr=transfers(S.month);
+  let h=`<div class="row between"><h2>${mnum(S.month)}の精算</h2>${tr.length?'<span class="pill orange">未精算あり</span>':items.length?'<span class="pill">精算済み</span>':''}</div>
+    <p class="note">コート代はその日に誰かが立て替えて払い、ほかの家庭は月に1回まとめて立て替えた人に払います。</p>`;
+  h+=items.length?`<div class="lines">${items.map(it=>{const up=upfront(it);return `<div class="line"><div><div>・${esc(it.label)}</div><div class="sub">${esc(it.sub)}</div><div class="sub">${up.length?'立替：'+up.map(x=>esc(famLabel(x.memberId))).join('、'):'<span style="color:var(--red)">まだ誰も払っていません</span>'}</div></div><div style="text-align:right"><span class="amt">${yen(it.amount)}</span>${!up.length&&S.family.length?`<br><button class="link" data-act="sheet" data-k="pay" data-p="${it.costId?'':it.practiceId}" data-m="${it.costId||''}">払った</button>`:''}</div></div>`}).join('')}</div>`:'<p class="note">今月の費用はまだありません。コート代のある練習や、ボール代などを登録するとここに出ます。</p>';
+  const b=myBal(S.month);
+  if(b&&(b.owe||b.paid)){
+    const bal=Math.round(b.bal);
+    h+=`<div class="bill${bal<0?'':' ok'}"><span class="l">${bal<0?'月末に支払う金額':bal>0?'月末に受け取る金額':'ご家庭の精算'}</span><span class="v">${Math.abs(bal).toLocaleString('ja-JP')}<small>円</small></span>
+      <span class="note" style="text-align:right">負担額 ${yen(b.owe)} ・ 立て替え・支払い済み ${yen(b.paid)}${b.recv?' ・ 受け取り済み '+yen(b.recv):''}</span></div>`;
+    const days=items.filter(it=>!it.costId&&S.family.some(id=>it.ids.includes(id)));
+    if(days.length)h+=`<h3>${mnum(S.month)}の参加履歴（${days.length}回）</h3><div class="lines">${days.map(it=>{const kids=S.family.filter(id=>it.ids.includes(id));const mineUp=upfront(it).some(x=>mineFam(x.memberId));return `<div class="line" style="align-items:center"><div>${mdw(it.date)} <span class="small muted">${S.family.length>1?kids.map(name).join('・'):''}</span></div><div class="row" style="gap:10px"><span class="amt">${yen(it.share*kids.length)}</span>${mineUp?'<span class="pill">立替</span>':''}</div></div>`}).join('')}</div>`;
   }
+  // 払う側（未払い）は管理者と本人の家庭だけに表示する
+  const mine=tr.map((o,i)=>({...o,i})).filter(o=>S.admin||mineFam(o.from));
+  h+=`<h3>${S.admin?'支払う金額（全家庭）':'あなたの家庭が支払う金額'}</h3>`;
+  h+=mine.length?`<div class="lines">${mine.map(o=>`<div class="line" style="align-items:center"><div>${S.admin?`<strong>${esc(famLabel(o.from))}</strong> → `:''}<strong>${esc(famLabel(o.to))}</strong>${S.admin?'':' へ'}</div><div class="row" style="gap:10px"><span class="amt">${yen(o.amount)}</span>${S.confirm==='settle:'+o.i?`<button class="btn sm primary" data-act="settle" data-k="${o.i}">払ったので記録</button>`:`<button class="pill red" style="border:0" data-act="confirm" data-k="settle:${o.i}">未払い</button>`}</div></div>`).join('')}</div><p class="note">お金を渡したら「未払い」を押して記録してください。${S.admin?'この一覧は管理者画面と、支払う本人の家庭にだけ表示されます。':'この金額は、あなたの家庭と管理者にだけ表示されます。'}</p>`:'<p class="note">支払いが必要な金額はありません。</p>';
+  if(!S.admin){const inc=tr.filter(o=>mineFam(o.to)).reduce((s,o)=>s+o.amount,0);if(inc)h+=`<p class="note">あなたの家庭が受け取る予定：<strong>${yen(inc)}</strong>（支払う側の名前は管理者だけが確認できます）</p>`}
+  h+=paidTable(S.month);
   return h;
 }
+function paidTable(m){
+  // 払った金額はみんなに公開
+  const by={};
+  for(const x of S.payments.filter(x=>payMonth(x)===m&&mem(x.memberId))){
+    const k=famKey(x.memberId);by[k]=by[k]||{up:0,settle:0};
+    if(x.to)by[k].settle+=Number(x.amount||0);else by[k].up+=Number(x.amount||0);
+  }
+  const keys=Object.keys(by);
+  return `<h3>${mnum(m)}に払った金額（全員に公開）</h3>`+(keys.length?`<div class="scroll"><table><thead><tr><th class="sticky">家庭</th><th class="num">コート代などの立替</th><th class="num">精算で払った</th><th class="num">合計</th></tr></thead><tbody>${keys.map(k=>`<tr${mineFam(k)?' class="mine"':''}><td class="sticky">${esc(famLabel(k))}<div class="small muted">${S.members.filter(x=>famKey(x._id)===k).map(x=>esc(x.name)).join('・')}</div></td><td class="num">${by[k].up?yen(by[k].up):'—'}</td><td class="num">${by[k].settle?yen(by[k].settle):'—'}</td><td class="num"><strong>${yen(by[k].up+by[k].settle)}</strong></td></tr>`).join('')}</tbody></table></div>`:'<p class="note">今月はまだ誰も払っていません。</p>');
+}
 function moneyHistory(){
-  const list=S.payments.filter(x=>inMonth(x.date)).sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
+  const list=S.payments.filter(x=>payMonth(x)===S.month).sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
   let h=S.family.length?`<div class="row"><button class="btn sm primary" data-act="sheet" data-k="pay">${ic('plus')}支払いを記録</button><button class="btn sm" data-act="sheet" data-k="cost">${ic('plus')}ボール代・備品代を追加</button></div>`:'';
   if(!list.length)return h+`<p class="note">${monthLabel(S.month)}の支払い記録はまだありません。</p>`;
   return h+`<div class="lines">${list.map(x=>{const pr=practice(x.practiceId),c=S.costs.find(y=>y._id===x.costId);const can=S.admin||isMine(x.memberId);return `<div class="line"><div><div><strong>${mdw(x.date)}</strong> ${esc(famLabel(x.memberId))}</div><div class="sub">${x.to?esc(famLabel(x.to))+'へ精算':'会計・コートへ'}${c?' ・ '+esc(c.kind):pr?' ・ '+md(pr.date)+'のコート代':''}${x.note?' ・ '+esc(x.note):''}</div></div><div class="row" style="gap:8px"><span class="amt">${yen(x.amount)}</span>${can?(S.confirm==='pay:'+x._id?`<button class="btn sm danger" data-act="delPay" data-r="${x._id}">削除</button>`:`<button class="link muted" data-act="confirm" data-k="pay:${x._id}">削除</button>`):''}</div></div>`}).join('')}</div>`;
 }
 function moneySummary(){
-  const {L}=ledger(S.month);
-  let h='';
   if(!S.members.length)return '<p class="note">選手が登録されていません。</p>';
-  h+=`<div class="scroll"><table><thead><tr><th class="sticky">選手</th><th class="num">負担額</th><th class="num">支払った</th><th class="num">受け取った</th><th class="num">差額</th></tr></thead><tbody>${S.members.map(m=>{const x=L[m._id];return `<tr${isMine(m._id)?' class="mine"':''}><td class="sticky">${esc(m.name)}</td><td class="num">${yen(x.owe)}</td><td class="num">${yen(x.paid)}</td><td class="num">${yen(x.recv)}</td><td class="num ${x.bal<0?'minus':x.bal>0?'plus':''}">${x.bal>0?'+':x.bal<0?'−':''}${yen(Math.abs(x.bal))}</td></tr>`}).join('')}</tbody></table></div>
-    <p class="note">差額がマイナスは支払いが必要、プラスはコート代などを立て替えて受け取る予定の金額です。欠席した人の負担はありません。端数は${S.settings.round||10}円単位で切り上げています。</p>`;
+  const F=famBalances(S.month);
+  let h=paidTable(S.month);
+  // 払う側の一覧は管理者だけ。保護者には自分の家庭の分だけ
+  const keys=Object.keys(F).filter(k=>S.admin||mineFam(k)).filter(k=>F[k].owe||F[k].paid||F[k].recv);
+  h+=`<h3>${S.admin?mnum(S.month)+'の負担と差額（全家庭・管理者のみ）':mnum(S.month)+'のあなたの家庭'}</h3>`;
+  h+=keys.length?`<div class="scroll"><table><thead><tr><th class="sticky">家庭</th><th class="num">負担額</th><th class="num">払った</th><th class="num">受け取った</th><th class="num">月末の精算</th></tr></thead><tbody>${keys.map(k=>{const x=F[k],b=Math.round(x.bal);return `<tr${mineFam(k)?' class="mine"':''}><td class="sticky">${esc(famLabel(k))}<div class="small muted">${S.members.filter(m=>famKey(m._id)===k).map(m=>esc(m.name)).join('・')}</div></td><td class="num">${yen(x.owe)}</td><td class="num">${yen(x.paid)}</td><td class="num">${yen(x.recv)}</td><td class="num ${b<0?'minus':b>0?'plus':''}">${b<0?'支払う '+yen(-b):b>0?'受け取る '+yen(b):'済み'}</td></tr>`}).join('')}</tbody></table></div>`:'<p class="note">今月の負担はありません。</p>';
+  h+=`<p class="note">負担額は参加した練習のコート代などを参加者で割った額（${S.settings.round||10}円単位で切り上げ）です。欠席した日の負担はありません。${S.admin?'この表は管理者だけに表示されます。':'ほかの家庭の負担額は管理者だけが確認できます。'}</p>`;
   const costs=S.costs.filter(c=>inMonth(c.date)).sort((a,b)=>a.date.localeCompare(b.date));
   if(costs.length)h+=`<h3>ボール代・備品代など</h3><div class="lines">${costs.map(c=>`<div class="line"><div><div>${mdw(c.date)} ${esc(c.kind)}</div><div class="sub">${c.split==='practice'?'練習の参加者で割る':'全員で割る'}${c.note?' ・ '+esc(c.note):''}</div></div><div class="row" style="gap:8px"><span class="amt">${yen(c.amount)}</span>${S.admin||mineFam(c.createdBy)?(S.confirm==='c:'+c._id?`<button class="btn sm danger" data-act="delCost" data-r="${c._id}">削除</button>`:`<button class="link muted" data-act="confirm" data-k="c:${c._id}">削除</button>`):''}</div></div>`).join('')}</div>`;
   return h;
@@ -808,7 +835,7 @@ function viewMe(){
     <div class="field"><label for="nm-parent">保護者名（任意）</label><input id="nm-parent" data-draft="nm.parent" value="${esc(draft('nm.parent',''))}" placeholder="例：山田 花子"></div>
     <div class="actions wide"><button class="btn sm primary">登録して家族に追加</button></div></form></section>`;
   if(S.family.length){
-    const ps=monthPractices().filter(p=>p.status!=='cancelled');const due=familyBill(S.month).reduce((s,r)=>s+r.due,0);
+    const ps=monthPractices().filter(p=>p.status!=='cancelled');const due=Math.max(0,-Math.round(myBal(S.month)?.bal||0));
     h+=`<section class="card"><h2>${monthLabel(S.month)}のわが家</h2><div class="plist">${S.family.map(m=>{const d=ps.filter(p=>resp(p._id,m)?.attend==='yes');return `<div class="prow">${av(m)}<div class="grow"><strong>${esc(name(m))}</strong><div class="small muted">参加 ${d.length}日${d.length?'：'+d.map(p=>mdw(p.date)).join('、'):''}</div></div></div>`}).join('')}</div>
       <div class="line"><span>未精算</span><span class="amt ${due>0?'minus':''}">${yen(due)}</span></div></section>`;
   }
@@ -915,15 +942,26 @@ function sheetBody(){
       <div class="actions wide">${close}<button class="btn primary">お願いを送る</button></div></form>`;
   }
   if(k==='pay'){
-    const pr=c.p?practice(c.p):null;
-    return `<form data-form="pay" class="fgrid"><h2 class="wide">${pr?'コート代を立て替えた':'支払いを記録'}</h2>
+    const pr=c.p?practice(c.p):null,cst=c.m?S.costs.find(x=>x._id===c.m):null;
+    if(cst)return `<form data-form="pay" class="fgrid"><h2 class="wide">${esc(cst.kind)}を立て替えた</h2>
+      <div class="field"><label for="py-m">立て替えた人</label><select id="py-m" data-draft="py.m">${S.members.map(m=>`<option value="${m._id}"${draft('py.m',rep())===m._id?' selected':''}>${esc(famLabel(m._id))}（${esc(m.name)}）</option>`).join('')}</select></div>
+      <div class="field"><label for="py-a">金額（円）</label><input id="py-a" type="number" min="0" inputmode="numeric" data-draft="py.a" value="${esc(draft('py.a',cst.amount))}"></div>
+      <div class="field"><label for="py-d">支払った日</label><input id="py-d" type="date" data-draft="py.d" value="${esc(draft('py.d',cst.date||today()))}"></div>
+      <div class="actions wide">${close}<button class="btn primary">記録する</button></div></form>`;
+    if(pr)return `<form data-form="pay" class="fgrid"><h2 class="wide">コート代を払った（${mdw(pr.date)}）</h2>
+      <p class="note wide">その日のコート代を全額払った人を記録します。ほかの家庭の分は月末にまとめて精算します。</p>
+      <div class="field"><label for="py-m">払った人</label><select id="py-m" data-draft="py.m">${S.members.map(m=>`<option value="${m._id}"${draft('py.m',rep())===m._id?' selected':''}>${esc(famLabel(m._id))}（${esc(m.name)}）</option>`).join('')}</select></div>
+      <div class="field"><label for="py-a">金額（円）</label><input id="py-a" type="number" min="0" inputmode="numeric" data-draft="py.a" value="${esc(draft('py.a',pr.fee||''))}"></div>
+      <div class="field"><label for="py-d">支払った日</label><input id="py-d" type="date" data-draft="py.d" value="${esc(draft('py.d',pr.date<=today()?pr.date:today()))}"></div>
+      <div class="actions wide">${close}<button class="btn primary">記録する</button></div></form>`;
+    return `<form data-form="pay" class="fgrid"><h2 class="wide">支払いを記録</h2>
       <div class="field"><label for="py-m">支払った人</label><select id="py-m" data-draft="py.m">${S.members.map(m=>`<option value="${m._id}"${draft('py.m',rep())===m._id?' selected':''}>${esc(famLabel(m._id))}（${esc(m.name)}）</option>`).join('')}</select></div>
       <div class="field"><label for="py-t">支払い先</label><select id="py-t" data-draft="py.t"><option value="">会計・コート・お店</option>${S.members.map(m=>`<option value="${m._id}"${draft('py.t','')===m._id?' selected':''}>${esc(famLabel(m._id))}へ精算</option>`).join('')}</select></div>
       <div class="field"><label for="py-d">支払った日</label><input id="py-d" type="date" data-draft="py.d" value="${esc(draft('py.d',today()))}"></div>
       <div class="field"><label for="py-a">金額（円）</label><input id="py-a" type="number" min="0" inputmode="numeric" data-draft="py.a" value="${esc(draft('py.a',pr?pr.fee:''))}"></div>
       <div class="field wide"><label for="py-p">対象の練習</label><select id="py-p" data-draft="py.p"><option value="">指定なし</option>${S.practices.slice().sort(byDate).filter(p=>inMonth(p.date)||p._id===c.p).map(p=>`<option value="${p._id}"${draft('py.p',c.p||'')===p._id?' selected':''}>${mdw(p.date)} ${esc(p.place)}</option>`).join('')}</select></div>
       <div class="field wide"><label for="py-n">メモ</label><input id="py-n" data-draft="py.n" value="${esc(draft('py.n',''))}" placeholder="例：コート受付で現金払い"></div>
-      <p class="note wide">コートに全額を払った場合は「会計・コート・お店」を選ぶと、ほかの家庭から受け取る金額が集計に出ます。</p>
+      <p class="note wide">コート代を全額払ったときは「会計・コート・お店」、月末の精算でほかの家庭に払ったときはその家庭を選んでください。</p>
       <div class="actions wide">${close}<button class="btn primary">記録する</button></div></form>`;
   }
   if(k==='cost'){
@@ -934,6 +972,7 @@ function sheetBody(){
       <div class="field"><label for="c-split">負担する人</label><select id="c-split" data-draft="c.split"><option value="all"${draft('c.split','all')==='all'?' selected':''}>登録している全員で割る</option><option value="practice"${draft('c.split','all')==='practice'?' selected':''}>選んだ練習の参加者で割る</option></select></div>
       <div class="field wide"><label for="c-p">対象の練習</label><select id="c-p" data-draft="c.practiceId"><option value="">指定なし</option>${monthPractices().map(p=>`<option value="${p._id}"${draft('c.practiceId','')===p._id?' selected':''}>${mdw(p.date)} ${esc(p.place)}</option>`).join('')}</select></div>
       <div class="field wide"><label for="c-note">メモ</label><input id="c-note" data-draft="c.note" value="${esc(draft('c.note',''))}" placeholder="例：新品購入・3か月分"></div>
+      <div class="field wide"><label for="c-payer">立て替えた人</label><select id="c-payer" data-draft="c.payer"><option value="">まだ払っていない</option>${S.members.map(m=>`<option value="${m._id}"${draft('c.payer',rep()||'')===m._id?' selected':''}>${esc(famLabel(m._id))}（${esc(m.name)}）</option>`).join('')}</select></div>
       <div class="actions wide">${close}<button class="btn primary">追加する</button></div></form>`;
   }
   if(k==='post'){
@@ -999,7 +1038,7 @@ document.addEventListener('click',async e=>{
     case 'planMode':S.planMode=S.planMode==='stats'?'list':'stats';break;
     case 'goRide':go('ride');if(p)S.ridePid=p;S.sub.ride=k||(p&&S.rides.some(x=>x.practiceId===p&&x.status==='open'&&x.toId&&isMine(x.toId))?'result':S.sub.ride);break;
     case 'ridePick':S.ridePid=p;break;
-    case 'goMoney':go('money');S.sub.money='month';break;
+    case 'goMoney':go('money');S.sub.money='month';if(k)S.month=k;break;
     case 'goMoneySum':go('money');S.sub.money='summary';break;
     case 'goTalk':go('talk');S.sub.talk=k||'all';markRead();break;
     case 'recTab':go('record');S.sub.record='menu';break;
@@ -1031,14 +1070,11 @@ document.addEventListener('click',async e=>{
     case 'rideDecline':await write(()=>col('rides').doc(r).update({status:'declined',updatedAt:Date.now()}));break;
     case 'rideUndo':await write(()=>col('rides').doc(r).delete(),'送迎の決定を取り消しました');break;
     case 'rideDel':await write(()=>col('rides').doc(r).delete(),'依頼を取り消しました');break;
-    case 'payItem':case 'payAll':{
+    case 'settle':{
       S.confirm=null;
-      const rows=familyBill(S.month).filter(x=>!x.paid&&(a==='payAll'||x.it.key===k));
-      for(const row of rows)for(const id of row.kids){
-        const owe=row.it.share-paidFor(row.it,id);if(owe<=0)continue;
-        await write(()=>col('payments').add({memberId:id,to:'',practiceId:row.it.costId?'':row.it.practiceId,costId:row.it.costId,date:today(),amount:owe,note:'集金',createdAt:Date.now()}));
-      }
-      toast('支払い済みにしました');break}
+      const o=transfers(S.month)[Number(k)];if(!o)break;
+      await write(()=>col('payments').add({memberId:o.from,to:o.to,practiceId:'',costId:'',settle:true,month:S.month,date:today(),amount:o.amount,note:mnum(S.month)+'分の精算',createdAt:Date.now()}),'精算を記録しました');
+      break}
     case 'delPay':S.confirm=null;await write(()=>col('payments').doc(r).delete(),'支払い記録を削除しました');break;
     case 'delCost':S.confirm=null;await write(()=>col('costs').doc(r).delete(),'費用を削除しました');break;
     case 'confirmRead':if(rep())await write(()=>col('reads').doc(r+'__'+rep()).set({postId:r,memberId:rep(),at:Date.now(),confirmed:true}),'確認済みにしました');break;
@@ -1118,16 +1154,25 @@ document.addEventListener('submit',async e=>{
     if(await write(()=>col('rides').add({practiceId:c.p,fromId:c.m,toId:T('as.to'),message:T('as.msg'),status:'open',byId:null,meetPoint:'',createdAt:Date.now()}),'送迎のお願いを送りました'))closeSheet();
   }
   if(kind==='pay'){
-    const amt=Number(draft('py.a',c.p?practice(c.p)?.fee:'')||0),mid=draft('py.m',rep()),to=T('py.t');
+    const pr=c.p?practice(c.p):null,cst=c.m?S.costs.find(x=>x._id===c.m):null;
+    const amt=Number(draft('py.a',cst?cst.amount:pr?pr.fee:'')||0),mid=draft('py.m',rep()),to=pr||cst?'':T('py.t');
+    const d=draft('py.d',cst?cst.date:pr?(pr.date<=today()?pr.date:today()):today());
     if(!mid||!amt){toast('支払った人と金額を入力してください');return}
     if(to&&to===mid){toast('支払った人と支払い先が同じです');return}
-    if(await write(()=>col('payments').add({memberId:mid,to,practiceId:draft('py.p',c.p||''),costId:'',date:draft('py.d',today()),amount:amt,note:T('py.n'),createdAt:Date.now()}),'支払いを記録しました'))closeSheet();
+    const pid=cst?'':pr?pr._id:draft('py.p','');
+    // which month this payment belongs to: the court day / cost date, otherwise the payment date
+    const month=(cst?cst.date:pid?practice(pid)?.date:d||'').slice(0,7)||d.slice(0,7);
+    if(await write(()=>col('payments').add({memberId:mid,to,practiceId:pid,costId:cst?cst._id:'',settle:!!to,month,date:d,amount:amt,note:T('py.n'),createdAt:Date.now()}),'支払いを記録しました'))closeSheet();
   }
   if(kind==='cost'){
-    const amt=Number(draft('c.amount',0)),split=draft('c.split','all'),pid=draft('c.practiceId','');
+    const amt=Number(draft('c.amount',0)),split=draft('c.split','all'),pid=draft('c.practiceId',''),payer=draft('c.payer',rep()||''),date=draft('c.date',today());
     if(!amt){toast('金額を入力してください');return}
     if(split==='practice'&&!pid){toast('参加者で割る場合は対象の練習を選んでください');return}
-    if(await write(()=>col('costs').add({kind:draft('c.kind','ボール代'),date:draft('c.date',today()),amount:amt,split,practiceId:pid,note:T('c.note'),createdBy:rep()||'',createdAt:Date.now()}),'費用を追加しました'))closeSheet();
+    const ref=col('costs').doc();
+    if(await write(()=>ref.set({kind:draft('c.kind','ボール代'),date,amount:amt,split,practiceId:pid,note:T('c.note'),createdBy:rep()||'',createdAt:Date.now()}),'費用を追加しました')){
+      if(payer)await write(()=>col('payments').add({memberId:payer,to:'',practiceId:'',costId:ref.id,settle:false,month:date.slice(0,7),date,amount:amt,note:'立替',createdAt:Date.now()}));
+      closeSheet();
+    }
   }
   if(kind==='post'){
     const title=T('po.title');if(!title){toast('件名を入力してください');return}

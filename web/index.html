@@ -1,0 +1,1471 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>テニス部連絡ノート</title>
+<meta name="theme-color" content="#2E8B4F">
+<meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="テニス部">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: phone-width app column on pale green (white cards, soft shadow, green primary, orange for notices/bills, red for unpaid/absent); sticky top bar + bottom tab bar; admin switches to a PC sidebar dashboard on wide screens. */
+:root{
+  --bg:#F1F7F0; --surface:#FFFFFF; --surface-2:#F6FAF5; --soft:#E5F2E6; --ink:#1C2A21; --muted:#66766B; --rule:#E0EADF;
+  --green:#2E8B4F; --green-ink:#FFFFFF; --green-soft:#E2F3E5;
+  --orange:#D9711A; --orange-soft:#FFF2E1; --red:#D6463A; --red-soft:#FCE8E5; --amber:#A07208; --amber-soft:#FAF0D4; --blue:#2F6FB5;
+  --shadow:0 1px 2px rgba(30,70,40,.06),0 6px 18px rgba(30,70,40,.06);
+  --f:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  --r:14px; --top-h:52px; --nav-h:60px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1611; --surface:#17211A; --surface-2:#1C2820; --soft:#1F3324; --ink:#E5EEE7; --muted:#9BAEA1; --rule:#2A3A2F;
+  --green:#4CB377; --green-ink:#0E1510; --green-soft:#1B3525;
+  --orange:#F0A256; --orange-soft:#38291A; --red:#F08273; --red-soft:#3A1F1B; --amber:#E5BE5B; --amber-soft:#342B13; --blue:#86B5EA;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1611; --surface:#17211A; --surface-2:#1C2820; --soft:#1F3324; --ink:#E5EEE7; --muted:#9BAEA1; --rule:#2A3A2F;
+  --green:#4CB377; --green-ink:#0E1510; --green-soft:#1B3525;
+  --orange:#F0A256; --orange-soft:#38291A; --red:#F08273; --red-soft:#3A1F1B; --amber:#E5BE5B; --amber-soft:#342B13; --blue:#86B5EA;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.6;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+.col{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body.wide .col{max-width:1120px}
+
+/* top bar */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--rule)}
+header.top .col{height:var(--top-h);display:grid;grid-template-columns:44px 1fr 44px;align-items:center}
+header.top h1{margin:0;text-align:center;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{width:40px;height:40px;border:0;background:none;border-radius:10px;display:grid;place-items:center;position:relative;color:var(--ink)}
+.iconbtn:hover{background:var(--soft)}
+.iconbtn svg.i{width:22px;height:22px}
+.badge{position:absolute;top:3px;right:2px;min-width:17px;height:17px;border-radius:9px;background:var(--red);color:#fff;font-size:10px;line-height:17px;padding:0 4px;font-weight:700;text-align:center}
+
+/* bottom nav */
+nav.bottom{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+nav.bottom .in{max-width:560px;margin:0 auto;display:flex}
+nav.bottom button{flex:1;min-width:0;background:none;border:0;padding:8px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:1px;color:var(--muted);font-size:11px;position:relative}
+nav.bottom button svg.i{width:22px;height:22px}
+nav.bottom button[aria-current="page"]{color:var(--green);font-weight:700}
+nav.bottom .badge{top:3px;right:auto;left:calc(50% + 6px)}
+
+main.col{padding-block:14px calc(var(--nav-h) + 32px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+
+/* generic */
+h2{font-size:16px;margin:0;font-weight:700;text-wrap:balance}
+h3{font-size:14px;margin:0;font-weight:700}
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--rule);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card.flush{padding:0;overflow:hidden;gap:0}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 16px;background:var(--green);color:var(--green-ink);font-weight:700}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.note{font-size:13px;color:var(--muted);margin:0}
+.pill{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap;background:var(--green-soft);color:var(--green)}
+.card-head .pill{background:var(--green-ink);color:var(--green)}
+.pill.red{background:var(--red-soft);color:var(--red)} .pill.orange{background:var(--orange-soft);color:var(--orange)}
+.pill.amber{background:var(--amber-soft);color:var(--amber)} .pill.grey{background:var(--soft);color:var(--muted)}
+.pill.solid-red{background:var(--red);color:#fff}
+.btn{border:1px solid var(--rule);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:700;line-height:1.3;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+a.btn{text-decoration:none}
+.btn:hover{border-color:var(--muted)}
+body.sheet-open #toast{bottom:auto;top:calc(var(--top-h) + 12px + env(safe-area-inset-top,0px))}
+.btn.primary{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.btn.outline{border-color:var(--green);color:var(--green)}
+.btn.block{width:100%;padding:12px}
+.btn.sm{padding:5px 11px;font-size:13px;border-radius:8px}
+.btn.danger{color:var(--red);border-color:color-mix(in srgb,var(--red) 40%,var(--rule))}
+.link{background:none;border:0;padding:0;color:var(--green);font-weight:700;font-size:13px}
+.link.muted{color:var(--muted);font-weight:500;text-decoration:underline}
+
+.tabs{display:flex;border-bottom:1px solid var(--rule);overflow-x:auto;gap:4px}
+.tabs button{flex:1;background:none;border:0;border-bottom:3px solid transparent;padding:10px 8px 8px;font-weight:700;color:var(--muted);white-space:nowrap;font-size:14px}
+.tabs button[aria-selected="true"]{color:var(--green);border-bottom-color:var(--green)}
+
+.facts{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.fact{display:flex;gap:8px;align-items:flex-start;min-width:0}
+.fact svg.i{color:var(--muted);margin-top:2px}
+.fact span{min-width:0;overflow-wrap:anywhere}
+.bigdate{font-size:24px;font-weight:900;letter-spacing:.01em;line-height:1.2}
+.bigdate small{font-size:16px;font-weight:700}
+
+/* answer buttons */
+.ans{display:flex;flex-direction:column;gap:8px}
+.ans .who{font-size:13px;font-weight:700;color:var(--muted)}
+.ans .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.a{border-radius:10px;padding:10px;font-weight:700;border:1.5px solid var(--rule);background:var(--surface);display:flex;align-items:center;justify-content:center;gap:6px}
+.a.yes{background:var(--green);border-color:var(--green);color:var(--green-ink);padding:12px;font-size:16px}
+.a.yes.off{background:var(--surface);color:var(--green)}
+.a.no{color:var(--red);border-color:color-mix(in srgb,var(--red) 45%,var(--rule))}
+.a.no.on{background:var(--red-soft);border-color:var(--red)}
+.a.maybe{color:var(--muted)}
+.a.maybe.on{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
+
+/* notice / todo */
+.notice{background:var(--orange-soft);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:6px;border:1px solid color-mix(in srgb,var(--orange) 25%,transparent)}
+.notice .t{color:var(--orange);font-weight:700;display:flex;align-items:center;gap:6px}
+.notice.red{background:var(--red-soft);border-color:color-mix(in srgb,var(--red) 30%,transparent)}
+.notice.red .t{color:var(--red)}
+.notice p{margin:0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.todo{display:flex;flex-direction:column}
+.todo button{display:flex;align-items:center;gap:10px;background:none;border:0;border-top:1px solid var(--rule);padding:11px 2px;text-align:left;font-size:14px;width:100%}
+.todo button:first-child{border-top:0}
+.todo .dot{width:22px;height:22px;border-radius:50%;border:1.8px solid var(--red);color:var(--red);display:grid;place-items:center;flex:none}
+.todo .dot svg.i{width:13px;height:13px}
+.sec-t{display:flex;align-items:center;gap:6px;font-weight:700}
+.sec-t.orange{color:var(--orange)} .sec-t.red{color:var(--red)}
+
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal .h{font-size:12px;color:var(--muted);padding:4px 0}
+.cal .h.sat,.cal .d.sat{color:var(--blue)} .cal .h.sun,.cal .d.sun{color:var(--red)}
+.cal .d{aspect-ratio:1;max-width:100%;border:0;background:none;border-radius:50%;display:grid;place-items:center;font-size:14px;position:relative;padding:0;margin:0 auto;width:min(40px,100%)}
+.cal .d.out{color:var(--rule)}
+.cal .d.has{background:var(--green-soft);color:var(--green);font-weight:700}
+.cal .d.has.cx{background:var(--red-soft);color:var(--red);text-decoration:line-through}
+.cal .d.today{background:var(--green);color:var(--green-ink);font-weight:900}
+.cal .d:not(.has):not(.today){cursor:default}
+.monthnav{display:flex;align-items:center;justify-content:space-between}
+.monthnav strong{font-size:16px}
+
+/* list cards */
+.pcard{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);box-shadow:var(--shadow);padding:14px 12px 14px 16px;text-align:left;width:100%}
+.pcard .grow{display:flex;flex-direction:column;gap:3px}
+.pcard .t{font-size:17px;font-weight:900}
+.pcard .chev{color:var(--muted)}
+.pcard.past{opacity:.75}
+
+/* people list */
+.plist{display:flex;flex-direction:column}
+.prow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--rule);min-width:0}
+.prow:first-child{border-top:0}
+.prow .grow{overflow-wrap:anywhere}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none;color:#fff}
+.av.c0{background:#4F9A6A}.av.c1{background:#D08A3A}.av.c2{background:#5D86B8}.av.c3{background:#B0637A}.av.c4{background:#7C8C3C}
+.av.car{background:var(--green-soft);color:var(--green)}
+.av.ride{background:var(--orange-soft);color:var(--orange)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--rule);background:var(--surface);border-radius:999px;padding:3px 12px;font-size:13px;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"].y{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.seg button[aria-pressed="true"].m{background:var(--soft);border-color:var(--muted);color:var(--ink)}
+.seg button[aria-pressed="true"].n{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.seg button[aria-pressed="true"].a{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+
+/* money */
+.lines{display:flex;flex-direction:column}
+.line{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--rule)}
+.line:first-child{border-top:0}
+.line .sub{font-size:12px;color:var(--muted)}
+.amt{font-weight:700;white-space:nowrap}
+.bill{background:var(--orange-soft);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.bill .l{color:var(--orange);font-weight:700;font-size:14px}
+.bill .v{text-align:right;font-size:30px;font-weight:900;color:var(--orange);line-height:1.1}
+.bill .v small{font-size:15px;margin-left:2px}
+.bill.ok{background:var(--green-soft)} .bill.ok .l,.bill.ok .v{color:var(--green)}
+.paystate{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.paystate button{border-radius:10px;padding:10px;font-weight:700;border:1.5px solid var(--rule);background:var(--surface);color:var(--muted)}
+.paystate button.on.unpaid{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.paystate button.on.paid{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+
+/* board */
+.post{display:flex;gap:10px;align-items:flex-start;padding:14px 0;border-top:1px solid var(--rule)}
+.post:first-child{border-top:0;padding-top:2px}
+.post .grow{display:flex;flex-direction:column;gap:4px}
+.post .body{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+.post .meta{font-size:12px;color:var(--muted)}
+.post .foot{display:flex;gap:14px;align-items:center;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.like{background:none;border:0;padding:0;display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px}
+.like.on{color:var(--orange);font-weight:700}
+.comment{font-size:13px;background:var(--surface-2);border-radius:8px;padding:6px 10px;overflow-wrap:anywhere}
+
+/* record */
+.photo-main{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:var(--soft);display:block;max-width:100%}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.photos img,.photos .add{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:var(--soft);display:block;max-width:100%}
+.photos .add{border:1.5px dashed var(--rule);display:grid;place-items:center;color:var(--muted);font-size:24px}
+.ph{position:relative}
+.ph button{position:absolute;top:4px;right:4px;border:0;border-radius:50%;width:24px;height:24px;background:rgba(0,0,0,.55);color:#fff;font-size:13px;line-height:1}
+.numh{display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px}
+.numh b{width:20px;height:20px;border-radius:50%;background:var(--green);color:var(--green-ink);display:grid;place-items:center;font-size:12px}
+ul.menu{margin:0;padding-left:22px;font-size:14px}
+.tx{margin:0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;padding-left:26px}
+
+/* forms / sheet */
+.sheet{position:fixed;inset:0;z-index:40;background:rgba(10,25,15,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet .in{background:var(--surface);width:100%;max-width:560px;max-height:calc(100% - 40px - env(safe-area-inset-top,0px));overflow-y:auto;border-radius:18px 18px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px}
+@media (min-width:700px){.sheet{align-items:center}.sheet .in{border-radius:18px;padding:22px}}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.field label{font-size:12px;color:var(--muted);font-weight:700}
+.field input,.field select,.field textarea{border:1px solid var(--rule);background:var(--surface);border-radius:9px;padding:9px 10px;width:100%;min-width:0}
+.field textarea{min-height:90px;resize:vertical}
+.wide{grid-column:1/-1}
+.check{display:flex;align-items:flex-start;gap:8px;font-size:14px}
+.check input{margin-top:4px}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+
+/* drawer */
+.drawer{position:fixed;inset:0;z-index:40;background:rgba(10,25,15,.45)}
+.drawer .in{position:absolute;top:0;bottom:0;left:0;width:min(300px,85%);background:var(--surface);padding:calc(16px + env(safe-area-inset-top,0px)) 12px 16px max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.drawer .brand{display:flex;align-items:center;gap:8px;font-weight:900;padding:6px 10px 14px}
+.ball{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#E9F56A,#C6D92A);position:relative;overflow:hidden;flex:none}
+.ball::before,.ball::after{content:"";position:absolute;width:26px;height:26px;border:2px solid #fff;border-radius:50%;opacity:.9}
+.ball::before{left:-17px;top:0}.ball::after{right:-17px;top:0}
+.navitem{display:flex;align-items:center;gap:12px;padding:11px 12px;border:0;background:none;border-radius:10px;text-align:left;font-weight:500;width:100%}
+.navitem:hover,.navitem.on{background:var(--green-soft);color:var(--green);font-weight:700}
+.bellpanel{position:fixed;z-index:40;top:calc(var(--top-h) + env(safe-area-inset-top,0px) + 6px);right:max(10px,env(safe-area-inset-right,0px));width:min(360px,calc(100% - 20px));max-height:70vh;overflow-y:auto}
+
+/* tables */
+.scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--rule);text-align:left;white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:700;background:var(--surface-2)}
+td.num,th.num{text-align:right}
+td.c,th.c{text-align:center}
+.mk{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--green)}
+.mk.off{background:none;border:1.5px solid var(--rule)} .mk.maybe{background:none;border:1.5px dashed var(--amber)}
+tr.mine td{background:var(--green-soft)}
+th.sticky,td.sticky{position:sticky;left:0;background:var(--surface);z-index:1}
+th.sticky{background:var(--surface-2)}
+tr.mine td.sticky{background:var(--green-soft)}
+.plus{color:var(--green)} .minus{color:var(--red)}
+.empty{text-align:center;color:var(--muted);padding:26px 16px;border:2px dashed var(--rule);border-radius:var(--r);display:flex;flex-direction:column;gap:8px;align-items:center}
+.empty strong{color:var(--ink)}
+.warn{background:var(--amber-soft);border-radius:10px;padding:10px 14px;font-size:14px}
+details summary{cursor:pointer;font-size:13px;color:var(--muted)}
+details ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
+.courtno{display:inline-flex;align-items:center;gap:4px;background:var(--green);color:var(--green-ink);border-radius:6px;padding:1px 8px;font-size:12px;font-weight:700}
+
+/* admin (PC) */
+.admin{display:grid;gap:16px}
+.side{display:none}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.card.kpi{flex-direction:row;gap:12px;align-items:center;padding:14px}
+.kpi .ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none}
+.kpi .ic svg.i{width:24px;height:24px}
+.kpi .ic.g{background:var(--green-soft);color:var(--green)} .kpi .ic.o{background:var(--orange-soft);color:var(--orange)} .kpi .ic.r{background:var(--red-soft);color:var(--red)}
+.kpi .v{font-size:22px;font-weight:900;line-height:1.2}
+@media (min-width:900px){
+  .admin{grid-template-columns:220px 1fr;align-items:start}
+  .side{display:flex;flex-direction:column;gap:2px;position:sticky;top:calc(var(--top-h) + 14px);background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);padding:10px}
+  .admin .main{display:flex;flex-direction:column;gap:16px;min-width:0}
+}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:50;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<script src="firebase-config.js"></script>
+<script type="module" src="backend.js"></script>
+</head>
+<body>
+<header class="top"><div class="col" id="top"></div></header>
+<main class="col" id="app">
+  <div class="empty"><strong>読み込み中…</strong><span>練習予定・出欠・送迎・費用・連絡を共有データから読み込んでいます。</span></div>
+</main>
+<nav class="bottom" aria-label="メニュー"><div class="in" id="nav"></div></nav>
+<div id="overlay"></div>
+<input type="file" id="photo-input" accept="image/*" hidden>
+<div id="toast" hidden></div>
+
+<script>
+(function(){
+const S={
+  db:null,user:null,uid:null,admin:false,assets:null,ready:false,offline:false,
+  members:[],practices:[],responses:[],rides:[],payments:[],costs:[],posts:[],comments:[],reads:[],likes:[],settings:{},
+  family:[],month:ym(new Date()),tab:'home',detail:null,dtab:'summary',attFilter:'all',planMode:'list',
+  sub:{ride:'drivers',money:'month',talk:'all',record:'menu'},ridePid:null,session:null,codes:{},loginMembers:null,adminReady:false,busy:false,loaded:false,subscribed:false,authStatus:null,login:{step:'pick'},auth:[],fails:0,waitUntil:0,seenAt:0,bellSince:0,knownEv:null,
+  sheet:null,ctx:{},drawer:false,bell:false,open:{},drafts:{},confirm:null,pendingRender:false,photoFor:null
+};
+const WD=['日','月','火','水','木','金','土'];
+const app=document.getElementById('app');
+const P={
+  home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  plan:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  talk:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+  money:'<circle cx="12" cy="12" r="9"/><path d="M8.5 7.5L12 12l3.5-4.5M8 12.5h8M8 15.5h8M12 12v6"/>',
+  record:'<path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7"/>',
+  bell:'<path d="M6 16V11a6 6 0 0112 0v5l2 2H4z"/><path d="M10 20a2 2 0 004 0"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  chev:'<path d="M9 5l7 7-7 7"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  pin:'<path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  car:'<path d="M3 13l2-6h14l2 6v5H3z"/><circle cx="7.5" cy="16" r="1.3"/><circle cx="16.5" cy="16" r="1.3"/>',
+  person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  q:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 .3c0 1.7-2.5 2-2.5 3.7M12 17v.3"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  bag:'<path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 016 0v2"/>',
+  alert:'<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.3"/>',
+  house:'<path d="M3 11l9-7 9 7"/><path d="M9 21v-6h6v6"/>',
+  umbrella:'<path d="M3 12a9 9 0 0118 0z"/><path d="M12 12v7a2 2 0 01-4 0"/>',
+  thumb:'<path d="M7 11v9H4v-9zM7 11l4-8a2 2 0 012 2v4h5.5a2 2 0 012 2.3l-1.2 7A2 2 0 0117.3 20H7"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2 20c1-3.5 3.8-5 7-5s6 1.5 7 5"/><path d="M16 4.5a3.5 3.5 0 010 7M18 15c2 .6 3.4 2.2 4 5"/>',
+  dash:'<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/>',
+  shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'
+};
+const ic=k=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[k]}</svg>`;
+
+/* ---------- helpers ---------- */
+function ym(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+function iso(d){return ym(d)+'-'+String(d.getDate()).padStart(2,'0')}
+function today(){return iso(new Date())}
+function nowLocal(){const d=new Date();return today()+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function parseD(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function md(s){const d=parseD(s);return (d.getMonth()+1)+'/'+d.getDate()}
+function wd(s){return WD[parseD(s).getDay()]}
+function mdw(s){return md(s)+'('+wd(s)+')'}
+function jdate(s){const d=parseD(s);return (d.getMonth()+1)+'月'+d.getDate()+'日'}
+function dl(s){return s?mdw(s.slice(0,10))+' '+s.slice(11,16):''}
+function addDays(s,n){const d=parseD(s);d.setDate(d.getDate()+n);return iso(d)}
+function stamp(t){const d=new Date(t);return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function yen(n){return Math.round(Number(n||0)).toLocaleString('ja-JP')+'円'}
+function monthLabel(m){const [y,mm]=m.split('-');return y+'年'+Number(mm)+'月'}
+function mnum(m){return Number(m.split('-')[1])+'月'}
+function shiftMonth(m,k){const [y,mm]=m.split('-').map(Number);return ym(new Date(y,mm-1+k,1))}
+function mem(id){return S.members.find(x=>x._id===id)}
+function name(id){return mem(id)?.name||'（削除された選手）'}
+function famKey(id){return mem(id)?.family||id}
+function famLabel(id){const k=famKey(id);const h=mem(k)||mem(id);if(!h)return '（不明）';const par=(mem(id)?.parent)||h.parent;return par?par+'さん':h.name+'の保護者'}
+function famCount(){return new Set(S.members.map(m=>m.family||m._id)).size}
+function avc(id){let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;return 'c'+(h%5)}
+function av(id,label){const t=(label||name(id)).trim();return `<span class="av ${avc(id)}" aria-hidden="true">${esc(t.slice(0,1))}</span>`}
+function resp(pid,mid){return S.responses.find(r=>r.practiceId===pid&&r.memberId===mid)}
+function isMine(id){return S.family.includes(id)}
+function mineFam(id){return id&&S.family.length&&famKey(id)===famKey(S.family[0])}
+function rep(){return S.family[0]||null}
+function draft(k,def){return S.drafts[k]??def}
+function memberIds(){return S.members.map(m=>m._id)}
+function attendees(pid){return S.responses.filter(r=>r.practiceId===pid&&r.attend==='yes'&&mem(r.memberId)).map(r=>r.memberId)}
+function inMonth(s,m){return s&&s.startsWith(m||S.month)}
+function byDate(a,b){return (a.date+(a.start||'')).localeCompare(b.date+(b.start||''))}
+function monthPractices(m){return S.practices.filter(p=>inMonth(p.date,m)).sort(byDate)}
+function upcoming(){const t=today();return S.practices.filter(p=>p.date>=t).sort(byDate)}
+function practice(id){return S.practices.find(p=>p._id===id)}
+function roundUp(x){const u=Number(S.settings.round||10);return Math.ceil(x/u-1e-9)*u}
+function deadlinePassed(p){return p.deadline&&p.deadline<nowLocal()}
+function statusPill(p){
+  if(p.status==='cancelled')return '<span class="pill solid-red">中止</span>';
+  if(p.date<today())return '<span class="pill grey">終了</span>';
+  if(deadlinePassed(p))return '<span class="pill grey">締切</span>';
+  return '<span class="pill">募集中</span>';
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200)}
+async function write(fn,ok){
+  if(!S.db){toast('共有データに接続できないため保存できません。');return false}
+  try{await fn();if(ok)toast(ok);return true}
+  catch(e){
+    const c=e&&e.code;
+    toast(c==='invalid_argument'?'保存する権限がありません。ログインし直してください。'
+      :c==='quota_exceeded'?'データ容量の上限に達しました。古い記録を削除してください。'
+      :'保存できませんでした。通信状態を確認してもう一度お試しください。');
+    return false}
+}
+const col=n=>S.db.collection(n);
+
+/* ---------- money ---------- */
+function shareItems(m){
+  // each billable item for the month with its per-person share and who owes it
+  const items=[];
+  for(const p of monthPractices(m)){
+    if(p.status==='cancelled'||!p.fee)continue;
+    const ids=attendees(p._id);
+    items.push({key:'p:'+p._id,kind:'テニスコート代金',label:`テニスコート代金（${md(p.date)}）`,date:p.date,amount:Number(p.fee),ids,share:ids.length?roundUp(p.fee/ids.length):0,practiceId:p._id,costId:'',sub:ids.length?`${ids.length}名で按分（1人 ${yen(roundUp(p.fee/ids.length))}）`:'参加者がいないため未割当'});
+  }
+  for(const c of S.costs.filter(c=>inMonth(c.date,m))){
+    const ids=c.split==='practice'&&c.practiceId?attendees(c.practiceId):memberIds();
+    const pr=practice(c.practiceId);
+    items.push({key:'c:'+c._id,kind:c.kind,label:c.kind+(pr?`（${md(pr.date)}）`:''),date:c.date,amount:Number(c.amount||0),ids,share:ids.length?roundUp(c.amount/ids.length):0,practiceId:c.split==='practice'?c.practiceId:'',costId:c._id,sub:(c.note?c.note+' ・ ':'')+(ids.length?`${ids.length}名で按分（1人 ${yen(roundUp(c.amount/ids.length))}）`:'未割当'),cost:c});
+  }
+  return items.sort((a,b)=>a.date.localeCompare(b.date));
+}
+// 立替: someone pays the court (or shop) in full; to '' and not a settlement
+function upfront(it){return S.payments.filter(x=>!x.to&&!x.settle&&(it.costId?x.costId===it.costId:(x.practiceId===it.practiceId&&!x.costId)))}
+function courtPaid(pid){return S.payments.filter(x=>x.practiceId===pid&&!x.to&&!x.settle&&!x.costId)}
+function payMonth(x){return x.month||(x.date||'').slice(0,7)}
+function ledger(m){
+  const L={};S.members.forEach(x=>L[x._id]={owe:0,paid:0,recv:0});
+  const items=shareItems(m);
+  for(const it of items){
+    for(const id of it.ids)if(L[id])L[id].owe+=it.share;
+    // rounding surplus goes to whoever paid upfront, so the month nets to zero
+    const first=upfront(it)[0];const extra=it.share*it.ids.length-it.amount;
+    if(first&&extra>0&&L[first.memberId])L[first.memberId].paid+=extra;
+  }
+  for(const x of S.payments.filter(x=>payMonth(x)===m)){
+    const a=Number(x.amount||0);
+    if(L[x.memberId])L[x.memberId].paid+=a;
+    if(x.to&&L[x.to])L[x.to].recv+=a;
+  }
+  for(const k in L)L[k].bal=L[k].paid-L[k].recv-L[k].owe;
+  return {L,items};
+}
+function famBalances(m){
+  const {L}=ledger(m);const F={};
+  for(const x of S.members){const k=famKey(x._id);F[k]=F[k]||{owe:0,paid:0,recv:0,bal:0};for(const f of ['owe','paid','recv','bal'])F[k][f]+=L[x._id][f]}
+  return F;
+}
+function transfers(m){
+  // who pays whom at month end: largest debts to largest credits
+  const F=famBalances(m);
+  const cr=Object.keys(F).filter(k=>F[k].bal>0.5).map(k=>({k,need:F[k].bal})).sort((a,b)=>b.need-a.need);
+  const dr=Object.keys(F).filter(k=>F[k].bal<-0.5).map(k=>({k,owe:-F[k].bal})).sort((a,b)=>b.owe-a.owe);
+  const out=[];
+  for(const d of dr){let left=d.owe;for(const c of cr){if(left<0.5)break;if(c.need<0.5)continue;const a=Math.min(left,c.need);out.push({from:d.k,to:c.k,amount:Math.round(a)});c.need-=a;left-=a}}
+  return out.filter(o=>o.amount>0);
+}
+function unpaidFamilies(m){const F=famBalances(m);return new Set(Object.keys(F).filter(k=>F[k].bal<-0.5))}
+function myBal(m){if(!S.family.length)return null;return famBalances(m)[famKey(S.family[0])]||null}
+
+/* ---------- todo / notices ---------- */
+function todoItems(){
+  const t=[];
+  const asks=S.rides.filter(r=>r.status==='open'&&r.toId&&isMine(r.toId)&&practice(r.practiceId)?.date>=today());
+  for(const r of asks)t.push({text:`${md(practice(r.practiceId).date)} ${name(r.fromId)}さんから送迎のお願いが届いています`,act:'goRide',p:r.practiceId});
+  for(const m of [shiftMonth(ym(new Date()),-1),ym(new Date())]){
+    const b=myBal(m);
+    if(b&&b.bal<-0.5)t.push({text:`${mnum(m)}分のテニスコート代金の精算が残っています（${yen(-b.bal)}）`,act:'goMoney',k:m});
+  }
+  for(const p of S.posts.filter(p=>p.level!=='normal'&&!confirmed(p._id)))t.push({text:`重要連絡「${p.title}」を確認してください`,act:'goTalk',k:'important'});
+  return S.family.length?t:[];
+}
+function readDoc(pid){const r=rep();return r?S.reads.find(x=>x.postId===pid&&x.memberId===r):null}
+function confirmed(pid){return !!readDoc(pid)?.confirmed}
+function todoList(items){
+  if(!items.length)return '<p class="note">対応が必要な項目はありません。</p>';
+  return `<div class="todo">${items.map(t=>`<button data-act="${t.act}" data-p="${t.p||''}" data-k="${t.k||''}"><span class="dot">${ic('clock')}</span><span class="grow">${esc(t.text)}</span>${ic('chev')}</button>`).join('')}</div>`;
+}
+
+/* ---------- render ---------- */
+function scheduleRender(){
+  const a=document.activeElement;
+  if(a&&(app.contains(a)||document.getElementById('overlay').contains(a))&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){S.pendingRender=true;return}
+  render();
+}
+document.addEventListener('focusout',()=>{setTimeout(()=>{if(S.pendingRender){S.pendingRender=false;scheduleRender()}},0)});
+
+const TITLES={home:'テニス部連絡ノート',plan:'練習予定',ride:'送迎調整',money:'費用管理',talk:'連絡掲示板',record:'練習記録',me:'マイページ',safety:'緊急連絡・安全',admin:'管理者画面'};
+/* ---------- 新着のお知らせ・LINEで知らせる ---------- */
+const APP_URL=location.origin+location.pathname.replace(/index\.html$/,'');
+// new or updated practices, rides and messages by other families, newest first
+function events(){
+  const ev=[];
+  for(const p of S.practices){
+    if(p.createdAt&&!mineFam(p.createdBy))ev.push({k:'p:'+p._id,at:p.createdAt,icon:'plan',text:`練習予定が登録されました：${mdw(p.date)} ${p.place}`,act:'openDetail',p:p._id});
+    (p.history||[]).forEach((h,i)=>{if(!mineFam(h.by))ev.push({k:'ph:'+p._id+':'+i,at:h.at,icon:h.text.startsWith('中止')?'alert':'plan',text:`${mdw(p.date)}の練習予定が${h.text.startsWith('中止：')?'中止になりました':'変更されました'}（${h.text}）`,act:'openDetail',p:p._id})});
+  }
+  for(const r of S.rides){
+    const pr=practice(r.practiceId);if(!pr)continue;
+    if(r.createdAt&&r.status!=='accepted'&&!mineFam(r.fromId))ev.push({k:'r:'+r._id,at:r.createdAt,icon:'car',text:`送迎のお願い：${md(pr.date)} ${name(r.fromId)}さん${r.toId?'（'+famLabel(r.toId)+'へ）':''}`,act:'goRide',p:pr._id});
+    if(r.status==='accepted'&&!mineFam(r.byId))ev.push({k:'ra:'+r._id,at:r.updatedAt||r.createdAt,icon:'car',text:`送迎が決まりました：${md(pr.date)} ${name(r.fromId)}さん → ${famLabel(r.byId)}の車`,act:'goRide',p:pr._id});
+  }
+  for(const x of S.posts)if(!mineFam(x.authorId))ev.push({k:'po:'+x._id,at:x.createdAt,icon:'talk',text:`${x.level==='emergency'?'【緊急】':x.level==='important'?'【重要】':''}連絡：${x.title}`,act:'goTalk',k2:x.level!=='normal'?'important':x.practiceId?'practice':'all'});
+  for(const r of S.responses)if(r.walkIn&&r.attend==='yes'&&r.addedAt&&isMine(r.memberId)){const pr=practice(r.practiceId);if(pr)ev.push({k:'wi:'+r._id+':'+r.addedAt,at:r.addedAt,icon:'check',text:`${name(r.memberId)}さんが${mdw(pr.date)}の練習に参加したと管理者が記録しました（テニスコート代金の割り勘に入ります）`,act:'openDetail',p:pr._id,k2:'attend'})}
+  for(const c of S.comments){const x=S.posts.find(y=>y._id===c.postId);if(x&&!mineFam(c.authorId))ev.push({k:'cm:'+c._id,at:c.createdAt,icon:'talk',text:`返信：「${x.title}」に${famLabel(c.authorId)}から`,act:'goTalk',k2:'all'})}
+  return ev.filter(e=>e.at).sort((a,b)=>b.at-a.at);
+}
+function newEvents(){return events().filter(e=>e.at>S.seenAt)}
+function saveSeen(){S.seenAt=Date.now();try{localStorage.setItem('tennis.seenAt',String(S.seenAt))}catch(_){}}
+function eventList(list,since){
+  if(!list.length)return '<p class="note">新しいお知らせはありません。</p>';
+  return `<div class="todo">${list.map(e=>`<button data-act="${e.act}" data-p="${e.p||''}" data-k="${e.k2||''}"><span class="dot" style="border-color:var(--green);color:var(--green)">${ic(e.icon)}</span><span class="grow">${e.at>since?'<span class="pill orange" style="margin-right:4px">新着</span>':''}${esc(e.text)}<br><span class="small muted">${stamp(e.at)}</span></span>${ic('chev')}</button>`).join('')}</div>`;
+}
+// message texts for the LINE group
+function practiceText(p,kind,detail){
+  const L=[`【テニス部 練習予定${kind}】`,`${jdate(p.date)}（${wd(p.date)}）${p.start||''}${p.end?'〜'+p.end:''}`,`${p.place} ${p.court}番コート`];
+  if(p.meetTime||p.meetPlace)L.push('集合 '+[p.meetTime,p.meetPlace].filter(Boolean).join(' '));
+  if(p.bring)L.push('持ち物：'+p.bring);
+  if(p.fee)L.push('テニスコート代金：'+yen(p.fee)+'（参加者で割り勘）');
+  if(p.deadline)L.push('締切：'+dl(p.deadline));
+  if(detail)L.push('変更点：'+detail);
+  L.push('','参加・送迎の登録はアプリから',APP_URL);
+  return L.join('\n');
+}
+// Firebase 版ではサーバーがプッシュ通知を送るので、LINE用の文章は出さない
+function offerShare(){}
+function walkInShare(pid,ids){
+  const p=practice(pid);const n=attendees(pid).length;const one=p.fee&&n?roundUp(p.fee/n):0;
+  return `【テニス部 参加のお知らせ】\n${jdate(p.date)}（${wd(p.date)}）${p.start||''} ${p.place}の練習に、${ids.map(name).join('・')}さんが参加しました（保護者の登録がなかったため、管理者が記録しました）。`+(one?`\nテニスコート代金は参加者${n}名で割り勘になり、1人 ${yen(one)}が今月の精算に入ります（参加者が増減すると変わります）。`:'')+`\n\nアプリで確認できます\n${APP_URL}`;
+}
+function offerWalkIn(pid,ids){offerShare(walkInShare(pid,ids),'対象の保護者に知らせる',true)}
+
+// while the app is open: pop a toast for anything new from other families
+function notifyArrivals(){
+  const ev=events();const keys=new Set(ev.map(e=>e.k));
+  if(!S.seenAt){saveSeen();S.knownEv=keys;return}
+  if(S.knownEv){const fresh=ev.filter(e=>!S.knownEv.has(e.k));if(fresh.length&&!locked())toast((fresh.length>1?`新着${fresh.length}件：`:'新着：')+fresh[0].text)}
+  S.knownEv=keys;
+  const n=newEvents().length;document.title=(n?`(${n}) `:'')+'テニス部連絡ノート';
+}
+
+/* ---------- login password ---------- */
+function locked(){return !S.session}
+function famOf(key){return S.members.filter(m=>famKey(m._id)===key).map(m=>m._id)}
+function errMsg(e){return (e&&e.message)||'うまくいきませんでした。通信状態を確認してもう一度お試しください。'}
+function renderLock(){
+  document.body.classList.remove('wide');
+  document.getElementById('top').innerHTML=`<span></span><h1>テニス部連絡ノート</h1><span></span>`;
+  document.getElementById('nav').innerHTML='';
+  document.getElementById('overlay').innerHTML='';
+  const L=S.login,err=S.lockErr?`<p class="note" style="color:var(--red)">${esc(S.lockErr)}</p>`:'';
+  const wrap=(inner)=>`<section class="card" style="margin-top:24px;align-items:center;text-align:center;gap:14px"><span class="ball" style="width:44px;height:44px"></span>${inner}</section>`;
+  const fw='style="width:100%;max-width:320px;text-align:left"',bw=`style="width:100%;max-width:320px;padding:12px"${S.busy?' disabled':''}`;
+  const pwf=(id,label,ac)=>`<div class="field" ${fw}><label for="${id}">${label}</label><input id="${id}" type="password" autocomplete="${ac}" data-draft="${id}" value="${esc(draft(id,''))}"></div>`;
+  const back=`<button class="link muted" data-act="loginBack">最初の画面にもどる</button>`;
+  const busy=S.busy?'確認しています…':'';
+  let h;
+  if(S.offline){app.innerHTML=wrap('<h2>ログイン</h2><p class="note">サーバーに接続できません。通信状態を確認して、ページを開き直してください。</p>');return}
+  if(L.step==='admin'){
+    h=wrap(`<h2>管理者画面</h2>`+(S.adminReady
+      ?`<p class="note">管理者パスワードを入力してください。</p><form data-form="admin-enter" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">${pwf('ad-pw','管理者パスワード','current-password')}${err}<button class="btn primary" ${bw}>${busy||'ひらく'}</button></form>`
+      :`<p class="note">はじめに管理者パスワードを決めます（8文字以上）。設定には、アプリを準備したときに決めた<strong>セットアップキー</strong>が必要です。管理者パスワードは保護者には教えず、管理担当の方だけで共有してください。</p><form data-form="admin-set" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%"><div class="field" ${fw}><label for="as-key">セットアップキー</label><input id="as-key" type="password" autocomplete="off" data-draft="as-key" value=""></div>${pwf('as-1','管理者パスワード','new-password')}${pwf('as-2','もう一度入力','new-password')}${err}<button class="btn primary" ${bw}>${busy||'設定してひらく'}</button></form>`)+back);
+  }else if(L.step==='set'||L.step==='enter'){
+    h=wrap(`<h2>${esc(L.name)} の保護者</h2>`+(L.step==='set'
+      ?(L.invited
+        ?`<p class="note">はじめてのログインです。管理担当の方から受け取った<strong>登録コード</strong>を入れて、家庭のパスワード（6文字以上）を決めてください。</p>
+          <form data-form="login-set" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">
+          <div class="field" ${fw}><label for="ls-code">登録コード（6けた）</label><input id="ls-code" inputmode="numeric" autocomplete="one-time-code" data-draft="ls-code" value="${esc(draft('ls-code',''))}"></div>
+          ${pwf('ls-1','パスワード','new-password')}${pwf('ls-2','もう一度入力','new-password')}
+          ${err}<button class="btn primary" ${bw}>${busy||'パスワードを設定してひらく'}</button></form>`
+        :`<p class="note">この家庭はまだ登録が済んでいません。管理担当の方に<strong>登録コード</strong>の発行を頼んでください。コードがないとパスワードを設定できません。</p>`)
+      :`<form data-form="login-enter" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">${pwf('le-pw','パスワード','current-password')}${err}<button class="btn primary" ${bw}>${busy||'ひらく'}</button></form>
+        <p class="note">パスワードを忘れたときは、管理担当の方にリセットと登録コードの再発行を頼んでください。</p>`)+back);
+  }else{
+    const list=S.loginMembers||[];
+    h=wrap(`<h2>ログイン</h2><p class="note">お子さんの名前を選んでください。</p>
+      <form data-form="login-pick" style="display:flex;flex-direction:column;gap:12px;align-items:center;width:100%">
+      <div class="field" ${fw}><label for="lp-m">お子さん</label><select id="lp-m" data-draft="lp.m"><option value="">選んでください</option>${list.map(m=>`<option value="${esc(m.id)}"${draft('lp.m','')===m.id?' selected':''}>${esc(m.name)}</option>`).join('')}</select></div>
+      ${err}<button class="btn primary" ${bw}>つぎへ</button></form>
+      <p class="note">名前がないときは、管理担当の方に登録を頼んでください。</p>
+      <button class="link" data-act="adminLogin">管理者としてひらく</button>`);
+  }
+  app.innerHTML=h;
+}
+function render(){
+  if(S.ready&&locked()){renderLock();return}
+  if(S.session&&!S.loaded){app.innerHTML='<div class="empty"><strong>読み込み中…</strong></div>';return}
+  document.body.classList.toggle('wide',S.tab==='admin'&&!S.detail);
+  const todo=S.ready?todoItems():[];const fresh=S.ready?newEvents():[];
+  const top=document.getElementById('top');
+  top.innerHTML=S.detail?`<button class="iconbtn" data-act="back" aria-label="戻る">${ic('back')}</button><h1>予定の詳細</h1><span></span>`
+    :`<button class="iconbtn" data-act="drawer" aria-label="メニューを開く">${ic('menu')}</button><h1>${TITLES[S.tab]||TITLES.home}</h1><button class="iconbtn" data-act="bell" aria-label="お知らせ">${ic('bell')}${todo.length+fresh.length?`<span class="badge">${todo.length+fresh.length}</span>`:''}</button>`;
+  const nav=[['home','ホーム'],['plan','予定'],['talk','連絡'],['money','費用'],['record','記録']];
+  const unread=S.ready&&S.family.length?S.posts.filter(p=>!readDoc(p._id)).length:0;
+  const bdg={talk:unread};
+  document.getElementById('nav').innerHTML=nav.map(([k,l])=>`<button type="button" data-act="tab" data-k="${k}" aria-current="${S.tab===k&&!S.detail?'page':'false'}">${ic(k)}<span>${l}</span>${bdg[k]?`<span class="badge">${bdg[k]}</span>`:''}</button>`).join('');
+  renderOverlay(todo);
+  if(!S.ready)return;
+  let h='';
+  if(S.offline)h+='<div class="warn">共有データに接続できません。サインインした状態でこのページを開いてください。</div>';
+  if(S.detail&&practice(S.detail))h+=viewDetail(practice(S.detail));
+  else{S.detail=null;if(S.tab==='admin'&&!S.admin)S.tab='home';h+=({home:viewHome,plan:viewPlan,ride:viewPlan,money:viewMoney,talk:viewTalk,record:viewRecord,me:viewMe,safety:viewSafety,admin:viewAdmin}[S.tab]||viewHome)()}
+  app.innerHTML=h;
+}
+function renderOverlay(todo){
+  const o=document.getElementById('overlay');let h='';
+  document.body.classList.toggle('sheet-open',!!S.sheet);
+  if(S.drawer){
+    const items=[['home','home','ホーム'],['plan','plan','練習予定'],['goRide','car','送迎調整'],['talk','talk','連絡掲示板'],['money','money','費用管理'],['record','record','練習記録'],['safety','shield','緊急連絡・安全'],['me','person','マイページ・家族']];
+    items.push(['admin','dash','管理者画面']);
+    h+=`<div class="drawer" data-act="closeOverlay"><nav class="in" aria-label="メニュー" data-stop="1"><div class="brand"><span class="ball"></span>テニス部連絡ノート</div>${items.map(([k,i,l])=>`<button class="navitem${S.tab===k?' on':''}" data-act="${k==='goRide'?'goRide':'tab'}" data-k="${k==='goRide'?'':k}">${ic(i)}${l}</button>`).join('')}
+      <button class="navitem" data-act="logout">${ic('back')}ログアウト</button>
+      <p class="note" style="padding:14px 12px 0">${S.family.length?esc(S.family.map(name).join('・'))+' の保護者として利用中':'マイページでお子さんを選んでください'}</p></nav></div>`;
+  }
+  if(S.bell)h+=`<div class="drawer" data-act="closeOverlay" style="background:transparent"></div><div class="card bellpanel" role="dialog" aria-label="お知らせ"><div class="sec-t" style="color:var(--green)">${ic('bell')}新着のお知らせ</div>${eventList(events().slice(0,15),S.bellSince)}<div class="sec-t red">${ic('alert')}未対応の項目</div>${todoList(todo)}</div>`;
+  if(S.sheet)h+=`<div class="sheet" data-act="closeOverlay"><div class="in" data-stop="1" role="dialog">${sheetBody()}</div></div>`;
+  o.innerHTML=h;
+}
+function tabs(group,items,val){return `<div class="tabs" role="tablist">${items.map(([k,l])=>`<button role="tab" data-act="sub" data-g="${group}" data-k="${k}" aria-selected="${val===k}">${l}</button>`).join('')}</div>`}
+function monthNav(){
+  return `<div class="monthnav"><button class="iconbtn" data-act="month" data-k="-1" aria-label="前の月">${ic('back')}</button><strong>${monthLabel(S.month)}</strong><button class="iconbtn" data-act="month" data-k="1" aria-label="次の月">${ic('chev')}</button></div>`;
+}
+function needFamily(){
+  if(S.family.length)return '';
+  return `<div class="warn">はじめに「マイページ」でお子さん（選手）を選んでください。兄弟姉妹がいる場合は複数選べます。 <button class="link" data-act="tab" data-k="me">マイページへ</button></div>`;
+}
+function facts(p,full){
+  const f=[[ 'clock',(p.start||'')+(p.end?' 〜 '+p.end:'')],['pin',`${p.place}　<span class="courtno">${esc(p.court)}番コート</span>`,true]];
+  if(p.meetTime||p.meetPlace)f.push(['person','集合 '+[p.meetTime,p.meetPlace].filter(Boolean).join(' ')]);
+  if(full){if(p.fee)f.push(['money',`テニスコート代金 ${yen(p.fee)}（参加者で割り勘）`]);if(p.deadline)f.push(['bell','回答締切 '+dl(p.deadline)]);if(p.note)f.push(['talk',p.note])}
+  return `<div class="facts">${f.map(([i,t,raw])=>`<div class="fact">${ic(i)}<span>${raw?t.replace(p.place,esc(p.place)):esc(t)}</span></div>`).join('')}</div>`;
+}
+
+/* ----- ① ホーム ----- */
+function answerBlock(p){
+  if(!S.family.length)return `<button class="btn primary block" data-act="tab" data-k="me">お子さんを選んで回答する</button>`;
+  return S.family.map(m=>{
+    const on=resp(p._id,m)?.attend==='yes';
+    return `<div class="ans">${S.family.length>1?`<span class="who">${esc(name(m))}</span>`:''}
+      ${on?`<button class="a yes" data-act="attend" data-p="${p._id}" data-m="${m}" data-k="yes" aria-pressed="true">${ic('check')}参加で登録済み</button>
+      <button class="link muted" style="align-self:center" data-act="attend" data-p="${p._id}" data-m="${m}" data-k="">参加を取り消す</button>`
+      :`<button class="a yes" data-act="attend" data-p="${p._id}" data-m="${m}" data-k="yes" aria-pressed="false">参加する</button>`}</div>`;
+  }).join('');
+}
+function viewHome(){
+  let h=needFamily();
+  const next=upcoming()[0];
+  if(next){
+    const cx=next.status==='cancelled';
+    h+=`<section class="card flush" aria-label="次回の自主練習"><div class="card-head"><span>次回の自主練習</span>${cx?'<span class="pill red">中止</span>':deadlinePassed(next)?'<span class="pill grey">締切済み</span>':'<span class="pill">参加受付中</span>'}</div>
+      <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px">
+        <div class="bigdate">${jdate(next.date)}<small>（${wd(next.date)}）</small></div>
+        ${facts(next)}
+        ${cx?`<p class="note" style="color:var(--red)">${esc(next.cancelReason||'この練習は中止になりました')}</p>`:answerBlock(next)}
+        <button class="link" data-act="openDetail" data-p="${next._id}" style="align-self:flex-start">詳細・参加者を見る ›</button>
+      </div></section>`;
+  }else h+=`<div class="empty"><strong>これからの練習予定はまだありません</strong><span>日付・テニスコート・コート番号を登録すると、ここに次回の練習が表示されます。</span><button class="btn primary" data-act="newPractice">${ic('plus')}予定を作成</button></div>`;
+  const notes=S.posts.filter(p=>p.level!=='normal').sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(b.level==='emergency')-(a.level==='emergency')||(b.createdAt||0)-(a.createdAt||0));
+  const n=notes[0];
+  if(n)h+=`<section class="notice${n.level==='emergency'?' red':''}"><div class="t">${ic(n.level==='emergency'?'alert':'house')}${n.level==='emergency'?'緊急のお知らせ':'重要なお知らせ'}</div>
+    <div class="row" style="align-items:flex-start;flex-wrap:nowrap;gap:10px"><span style="color:var(--blue)">${ic('umbrella')}</span><div class="grow"><strong style="font-size:14px">${esc(n.title)}</strong>${n.body?`<p>${esc(n.body)}</p>`:''}</div></div>
+    <div class="row">${S.family.length&&!confirmed(n._id)?`<button class="btn sm primary" data-act="confirmRead" data-r="${n._id}">確認しました</button>`:S.family.length?'<span class="pill">確認済み</span>':''}<button class="link" data-act="goTalk" data-k="important">詳細を見る</button></div></section>`;
+  const wi=S.responses.filter(r=>r.walkIn&&r.attend==='yes'&&isMine(r.memberId)&&inMonth(practice(r.practiceId)?.date||'',ym(new Date()))).map(r=>({r,p:practice(r.practiceId)})).sort((a,b)=>b.p.date.localeCompare(a.p.date));
+  if(wi.length)h+=`<section class="notice"><div class="t">${ic('check')}管理者が記録した参加（${mnum(ym(new Date()))}）</div>${wi.map(({r,p})=>{const n=attendees(p._id).length;return `<p>${mdw(p.date)} ${esc(p.place)}：<strong>${esc(name(r.memberId))}</strong>さん${p.fee&&n?`　テニスコート代金 1人 ${yen(roundUp(p.fee/n))}（${n}名で割り勘）`:''}</p>`}).join('')}<p class="note">保護者の登録なしで参加したため、管理者が記録しました。今月のテニスコート代金の精算に自動で入っています。違う場合は管理担当の方に連絡してください。</p></section>`;
+  if(window.TENNIS&&S.session&&S.session!=='admin'&&!pushState().on&&pushState().perm==='default'&&!S.pushDismissed)h+=`<section class="card" style="gap:8px"><div class="sec-t" style="color:var(--green)">${ic('bell')}通知を受け取りますか？</div><p class="note">練習予定・送迎・連絡が登録・変更されたときに、スマートフォンに通知が届きます。</p>${pushCard(false)}<button class="link muted" data-act="pushLater">あとで</button></section>`;
+  const todo=todoItems();
+  h+=`<section class="card"><div class="sec-t orange">${ic('alert')}未対応の項目</div>${todoList(todo)}</section>`;
+  return h;
+}
+
+/* ----- ② 練習予定 ----- */
+function calendar(){
+  const [y,m]=S.month.split('-').map(Number);
+  const first=new Date(y,m-1,1),start=new Date(y,m-1,1-first.getDay());
+  const days=new Map();S.practices.forEach(p=>{if(!days.has(p.date)||p.status!=='cancelled')days.set(p.date,p)});
+  let h=`<div class="cal">${WD.map((w,i)=>`<div class="h${i===0?' sun':i===6?' sat':''}">${w}</div>`).join('')}`;
+  const t=today();
+  for(let i=0;i<42;i++){
+    const d=new Date(start);d.setDate(start.getDate()+i);
+    if(i>=35&&d.getMonth()!==m-1)break;
+    const s=iso(d),p=days.get(s),out=d.getMonth()!==m-1;
+    const cls=['d',d.getDay()===0?'sun':d.getDay()===6?'sat':'',out?'out':'',p&&!out?'has':'',p&&p.status==='cancelled'?'cx':'',s===t?'today':''].join(' ');
+    h+=p&&!out?`<button class="${cls}" data-act="openDetail" data-p="${p._id}" aria-label="${jdate(s)}の練習">${d.getDate()}</button>`:`<span class="${cls}">${d.getDate()}</span>`;
+  }
+  return h+'</div>';
+}
+function viewPlan(){
+  let h=needFamily()+`<section class="card">${monthNav()}${calendar()}<div class="row between"><span class="note">緑の日に練習があります。日付を押すと詳細が開きます。</span><button class="link" data-act="planMode">${S.planMode==='stats'?'予定一覧に戻る':'月間参加記録 ›'}</button></div></section>`;
+  if(S.planMode==='stats')return h+`<h2>${monthLabel(S.month)}の参加記録</h2>`+statsTable(false);
+  const list=monthPractices();
+  if(!list.length)h+=`<div class="empty"><strong>${monthLabel(S.month)}の練習予定はまだありません</strong><span>「予定を作成」から登録できます。誰でも作成できます。</span></div>`;
+  for(const p of list){
+    h+=`<button class="pcard${p.date<today()?' past':''}" data-act="openDetail" data-p="${p._id}"><div class="grow">
+      <div class="row between"><span class="t">${jdate(p.date)}（${wd(p.date)}）</span>${statusPill(p)}</div>${facts(p)}${rideSummary(p)}</div><span class="chev">${ic('chev')}</span></button>`;
+  }
+  return h+`<button class="btn primary block" data-act="newPractice">${ic('plus')}予定を作成</button>`;
+}
+
+/* ----- ③ 予定の詳細・出欠 ----- */
+function viewDetail(p){
+  const cx=p.status==='cancelled';
+  let h=`<section class="card"><div class="row between"><div class="bigdate">${jdate(p.date)}<small>（${wd(p.date)}）</small></div>${statusPill(p)}</div>
+    <div class="muted">${esc(p.start||'')}${p.end?' 〜 '+esc(p.end):''}</div>
+    ${tabs('dtab',[['summary','概要'],['attend','出欠'],['ride','送迎'],['bring','持ち物'],['talk','連絡']],S.dtab)}`;
+  if(S.dtab==='attend')h+=detailAttend(p);
+  else if(S.dtab==='ride')h+=p.status==='cancelled'?'<p class="note">この練習は中止のため、送迎の調整はありません。</p>':rideBody(p);
+  else if(S.dtab==='bring')h+=detailBring(p);
+  else if(S.dtab==='talk')h+=detailTalk(p);
+  else h+=detailSummary(p);
+  return h+'</section>';
+}
+function detailSummary(p){
+  const cx=p.status==='cancelled',canManage=S.admin||mineFam(p.createdBy);
+  const yes=attendees(p._id);
+  let h=facts(p,true);
+  if(cx)h+=`<div class="notice red"><div class="t">${ic('alert')}中止</div><p>${esc(p.cancelReason||'理由の記載なし')}</p></div>`;
+  if(p.fee&&yes.length)h+=`<p class="note">いまの参加者 ${yes.length}名で割ると、1人 ${yen(roundUp(p.fee/yes.length))}（${S.settings.round||10}円単位で切り上げ）。月末にまとめて精算します。</p>`;
+  if(p.fee&&!cx){const cp=courtPaid(p._id);h+=cp.length?`<p class="note">テニスコート代金を払った人：${cp.map(x=>`<strong>${esc(famLabel(x.memberId))}</strong>（${yen(x.amount)}）${S.admin||mineFam(x.memberId)?` <button class="link muted" data-act="delPay" data-r="${x._id}">取り消す</button>`:''}`).join('、')}</p>`:'<p class="note" style="color:var(--red)">テニスコート代金を払った人はまだ記録されていません。</p>'}
+  if(!cx){
+    const drv=S.responses.filter(r=>r.practiceId===p._id&&r.attend==='yes'&&r.transport==='can');
+    const need=S.responses.filter(r=>r.practiceId===p._id&&r.attend==='yes'&&r.transport==='cannot');
+    h+=`<button class="pcard" data-act="goRide" data-p="${p._id}" style="box-shadow:none"><span class="av car">${ic('car')}</span><div class="grow"><strong>送迎調整</strong><span class="note">車を出せる ${drv.length}台 ・ 乗せてほしい ${need.length}人</span></div><span class="chev">${ic('chev')}</span></button>`;
+  }
+  if(S.open['cancel:'+p._id])h+=`<form class="card" data-form="cancel" data-p="${p._id}" style="box-shadow:none"><div class="field"><label for="cr-${p._id}">中止の理由（全員に表示）</label><input id="cr-${p._id}" data-draft="cr.${p._id}" value="${esc(draft('cr.'+p._id,'雨天のため中止します'))}"></div><label class="check"><input type="checkbox" id="cn-${p._id}" data-draft-check="cn.${p._id}" ${draft('cn.'+p._id,true)?'checked':''}> 連絡掲示板に緊急連絡として投稿する</label><div class="actions"><button type="button" class="btn sm" data-act="close" data-k="cancel:${p._id}">やめる</button><button class="btn sm danger">中止にする</button></div></form>`;
+  const hist=p.history||[];
+  if(hist.length)h+=`<details><summary>変更履歴（${hist.length}件）</summary><ul>${hist.slice().reverse().map(x=>`<li>${stamp(x.at)} ${esc(x.text)}</li>`).join('')}</ul></details>`;
+  h+=`<div class="row">
+    ${S.family.length&&!cx&&p.fee&&!courtPaid(p._id).length?`<button class="btn sm primary" data-act="sheet" data-k="pay" data-p="${p._id}">テニスコート代金を払った</button>`:''}
+    ${p.date<=today()&&!cx?`<button class="btn sm" data-act="sheet" data-k="record" data-p="${p._id}">${p.record?'練習記録を編集':'練習記録を書く'}</button>`:''}
+    <button class="btn sm" data-act="sheet" data-k="practice" data-p="${p._id}">編集</button>
+    <button class="btn sm" data-act="sheet" data-k="dup" data-p="${p._id}">複製</button>
+    ${canManage?(cx?`<button class="btn sm" data-act="uncancel" data-p="${p._id}">中止を取り消す</button>`:`<button class="btn sm danger" data-act="toggle" data-k="cancel:${p._id}">中止にする</button>`):''}
+    ${canManage?(S.confirm==='p:'+p._id?`<button class="btn sm danger" data-act="delPractice" data-p="${p._id}">本当に削除する</button>`:`<button class="link muted" data-act="confirm" data-k="p:${p._id}">削除</button>`):''}
+  </div>`;
+  return h;
+}
+function detailAttend(p){
+  const cx=p.status==='cancelled';
+  let h='';
+  if(!cx)h+=`<div><h3>参加の登録</h3>${p.deadline?`<p class="note">締切 ${dl(p.deadline)}${deadlinePassed(p)?'（締切を過ぎています）':''}</p>`:''}</div>${answerBlock(p)}`;
+  const rows=S.members.map(m=>({m,r:resp(p._id,m._id),on:resp(p._id,m._id)?.attend==='yes'}));
+  const n=rows.filter(r=>r.on).length;
+  const f=S.attFilter==='all'||S.attFilter==='off'?S.attFilter:'yes';
+  h+=`<div class="row between"><h3>参加者一覧（${n}名）</h3>${S.admin&&!cx?`<button class="btn sm outline" data-act="sheet" data-k="walkin" data-p="${p._id}">${ic('plus')}参加した子を追加</button>`:''}</div>
+    <div class="seg"><button class="y" data-act="attFilter" data-k="yes" aria-pressed="${f==='yes'}">参加 ${n}</button><button class="m" data-act="attFilter" data-k="off" aria-pressed="${f==='off'}">登録なし ${rows.length-n}</button><button class="a" data-act="attFilter" data-k="all" aria-pressed="${f==='all'}">全員</button></div>`;
+  const shown=rows.filter(x=>f==='all'||(f==='yes'?x.on:!x.on));
+  h+=shown.length?`<div class="plist">${shown.map(({m,r,on})=>`<div class="prow">${av(m._id)}<div class="grow"><strong>${esc(m.name)}</strong> <span class="small muted">${m.parent?'（'+esc(m.parent)+'さん）':''}</span>${on&&r.transport?`<div class="small muted">${r.transport==='can'?'車を出せる（'+(r.seats||0)+'人乗れる）':r.transport==='cannot'?'送迎希望':'自分で行く'}</div>`:''}</div>
+      ${on?(r.walkIn?'<span class="pill orange">管理者が追加</span>':'<span class="pill">参加</span>'):'<span class="pill grey">—</span>'}
+      ${S.admin&&!cx?(on?`<button class="link muted" data-act="adminAttend" data-p="${p._id}" data-m="${m._id}" data-k="">外す</button>`:`<button class="btn sm outline" data-act="adminAttend" data-p="${p._id}" data-m="${m._id}" data-k="yes">参加にする</button>`):''}</div>`).join('')}</div>`:'<p class="note">該当する人はいません。</p>';
+  if(S.admin)h+='<p class="note">保護者の登録なしで来た子は、管理者が「参加にする」で追加できます。追加した子もテニスコート代金の割り勘と参加日数に入ります。</p>';
+  return h;
+}
+function detailBring(p){
+  const items=(p.bring||'').split(/[、,，\n]/).map(s=>s.trim()).filter(Boolean);
+  if(!items.length)return `<p class="note">持ち物はまだ登録されていません。「概要」の「編集」から追加できます。</p>`;
+  let checked={};try{checked=JSON.parse(localStorage.getItem('tennis.bring.'+p._id)||'{}')}catch(_){}
+  return `<p class="note">チェックはこの端末だけに保存されます。</p><div class="plist">${items.map((t,i)=>`<label class="prow check" style="align-items:center"><input type="checkbox" data-act-change="bring" data-p="${p._id}" value="${i}" ${checked[i]?'checked':''}> <span class="grow"${checked[i]?' style="text-decoration:line-through;color:var(--muted)"':''}>${esc(t)}</span></label>`).join('')}</div>`;
+}
+function detailTalk(p){
+  const posts=S.posts.filter(x=>x.practiceId===p._id).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  return `${S.family.length?`<button class="btn outline sm" data-act="sheet" data-k="post" data-p="${p._id}" style="align-self:flex-start">${ic('plus')}この練習について連絡</button>`:''}`+(posts.length?`<div>${posts.map(postItem).join('')}</div>`:'<p class="note">この練習についての連絡はまだありません。</p>');
+}
+
+/* ----- ④ 送迎調整 ----- */
+function rideCtx(p){
+  const rs=S.responses.filter(r=>r.practiceId===p._id&&r.attend==='yes'&&mem(r.memberId));
+  const drivers=rs.filter(r=>r.transport==='can'),riders=rs.filter(r=>r.transport==='cannot');
+  const rides=S.rides.filter(r=>r.practiceId===p._id);
+  const accepted=rides.filter(r=>r.status==='accepted');
+  const used=d=>accepted.filter(r=>famKey(r.byId)===famKey(d.memberId)).length;
+  const assigned=mid=>accepted.find(r=>r.fromId===mid);
+  return {drivers,riders,rides,accepted,used,assigned};
+}
+function rideSummary(p){
+  if(p.status==='cancelled'||p.date<today())return '';
+  const C=rideCtx(p);if(!C.drivers.length&&!C.riders.length)return `<div class="fact small muted">${ic('car')}<span>送迎の登録はまだありません</span></div>`;
+  const seats=C.drivers.reduce((t,d)=>t+Math.max(0,(d.seats||0)-C.used(d)),0),wait=C.riders.filter(r=>!C.assigned(r.memberId)).length;
+  return `<div class="fact small">${ic('car')}<span>車 ${C.drivers.length}台・空き ${seats}人・乗りたい ${C.riders.length}人${wait?` <span class="pill orange">未決定 ${wait}</span>`:' <span class="pill">送迎決定</span>'}</span></div>`;
+}
+function rideBody(p){
+  // 送迎調整（練習の詳細の「送迎」タブに表示）
+  const C=rideCtx(p);
+  let h=`<div class="seg" role="group" aria-label="送迎">${[['drivers','乗せられる'],['riders','乗りたい'],['result','調整結果']].map(([k,l])=>`<button class="y" data-act="sub" data-g="ride" data-k="${k}" aria-pressed="${S.sub.ride===k}">${l}</button>`).join('')}</div>`;
+  const S2=S.sub.ride;
+  if(S2==='drivers'){
+    h+=`<div class="row between"><span class="sec-t">車を出せる方 <span class="muted" title="参加と回答したうえで車を出せる家庭">${ic('q')}</span></span>${S.family.length?`<button class="btn sm primary" data-act="sheet" data-k="driver" data-p="${p._id}">${ic('plus')}登録する</button>`:''}</div>`;
+    h+=C.drivers.length?`<div class="plist">${C.drivers.map(d=>{const left=Math.max(0,(d.seats||0)-C.used(d));return `<div class="prow"><span class="av car">${ic('car')}</span><div class="grow"><div class="row" style="gap:10px"><strong>${esc(famLabel(d.memberId))}</strong><span class="small">${d.seats||0}人</span>${left?`<span class="pill">空き${left}</span>`:'<span class="pill grey">満席</span>'}</div><div class="small muted">${esc(d.route||'経路・出発時刻は未記入')}</div></div>${isMine(d.memberId)?`<button class="btn sm" data-act="sheet" data-k="driver" data-p="${p._id}" data-m="${d.memberId}">編集</button>`:''}</div>`}).join('')}</div>`:'<p class="note">まだ登録がありません。車を出せる方は「登録する」から、乗せられる人数と出発場所を入力してください。</p>';
+  }else if(S2==='riders'){
+    const myDriver=C.drivers.find(d=>isMine(d.memberId));
+    const myLeft=myDriver?Math.max(0,(myDriver.seats||0)-C.used(myDriver)):0;
+    h+=`<div class="row between"><span class="sec-t">乗せてほしい方 <span class="muted" title="参加と回答したうえで送迎を希望する人">${ic('q')}</span></span>${S.family.length?`<button class="btn sm primary" data-act="sheet" data-k="rider" data-p="${p._id}">${ic('plus')}登録する</button>`:''}</div>`;
+    h+=C.riders.length?`<div class="plist">${C.riders.map(r=>{const a=C.assigned(r.memberId);const req=C.rides.find(x=>x.fromId===r.memberId&&x.status==='open');let right='';
+      if(a)right=`<span class="pill">決定</span>`;
+      else if(myLeft&&!isMine(r.memberId))right=`<button class="btn sm primary" data-act="take" data-p="${p._id}" data-m="${r.memberId}">乗せる</button>`;
+      else if(isMine(r.memberId)&&!req)right=`<button class="btn sm" data-act="sheet" data-k="ask" data-p="${p._id}" data-m="${r.memberId}">お願いする</button>`;
+      else right=`<span class="pill orange">調整中</span>`;
+      return `<div class="prow"><span class="av ride">${ic('person')}</span><div class="grow"><div class="row" style="gap:10px"><strong>${esc(name(r.memberId))}さん</strong><span class="small">1人</span></div><div class="small muted">${esc(r.pickup||'乗る場所は未記入')}${a?' ・ '+esc(famLabel(a.byId))+'の車':req?' ・ '+(req.toId?esc(famLabel(req.toId))+'へ依頼中':'依頼中'):''}</div></div>${right}</div>`}).join('')}</div>`:'<p class="note">乗せてほしい方の登録はまだありません。</p>';
+    if(myDriver)h+=`<p class="note">あなたの車の空き：${myLeft}人。「乗せる」を押すと送迎が決まります。</p>`;
+  }else{
+    const groups=C.drivers.map(d=>({d,list:C.accepted.filter(r=>famKey(r.byId)===famKey(d.memberId))})).filter(g=>g.list.length);
+    const orphan=C.accepted.filter(r=>!C.drivers.some(d=>famKey(d.memberId)===famKey(r.byId)));
+    const waiting=C.riders.filter(r=>!C.assigned(r.memberId));
+    h+=groups.length||orphan.length?groups.map(g=>`<div class="card" style="box-shadow:none;gap:6px"><div class="row" style="gap:10px"><span class="av car">${ic('car')}</span><div class="grow"><strong>${esc(famLabel(g.d.memberId))}の車</strong><div class="small muted">${esc(g.d.route||'')}</div></div><span class="small">${g.list.length}/${g.d.seats||0}人</span></div>${g.list.map(r=>rideLine(r)).join('')}</div>`).join('')+orphan.map(r=>`<div class="card" style="box-shadow:none;gap:6px"><strong>${esc(famLabel(r.byId))}の車</strong>${rideLine(r)}</div>`).join(''):'<p class="note">決まった送迎はまだありません。</p>';
+    const pend=C.rides.filter(r=>r.status!=='accepted');
+    if(pend.length)h+=`<h3>依頼中</h3>`+pend.map(r=>{let b='';if(r.status==='open'&&r.toId&&isMine(r.toId))b=`<button class="btn sm primary" data-act="rideAccept" data-r="${r._id}">引き受ける</button><button class="btn sm" data-act="rideDecline" data-r="${r._id}">今回は無理</button>`;else if(r.status==='open'&&!r.toId&&S.family.length&&!isMine(r.fromId))b=`<button class="btn sm primary" data-act="rideAccept" data-r="${r._id}">引き受ける</button>`;if(isMine(r.fromId)||S.admin)b+=`<button class="link muted" data-act="rideDel" data-r="${r._id}">取り消す</button>`;
+      return `<div class="prow"><span class="av ride">${ic('person')}</span><div class="grow"><strong>${esc(name(r.fromId))}さん</strong> → ${r.toId?esc(famLabel(r.toId)):'車を出せる方どなたか'}<div class="small muted">${r.status==='declined'?'今回はむずかしいそうです':'返事待ち'}${r.message?' ・ '+esc(r.message):''}</div></div><div class="row">${b}</div></div>`}).join('');
+    if(waiting.length)h+=`<p class="note">まだ決まっていない人：${waiting.map(r=>esc(name(r.memberId))+'さん').join('、')}</p>`;
+    h+='<p class="note">住所や電話番号は書かずに、待ち合わせ場所と時刻だけを共有してください。</p>';
+  }
+  return h;
+}
+function rideLine(r){
+  return `<div class="row small" style="padding-left:44px;gap:8px">${ic('person')}<span class="grow">${esc(name(r.fromId))}さん ・ ${esc(r.meetPoint||resp(r.practiceId,r.fromId)?.pickup||'待ち合わせ未定')}</span>${mineFam(r.byId)||isMine(r.fromId)||S.admin?`<button class="link muted" data-act="rideUndo" data-r="${r._id}">取り消す</button>`:''}</div>`;
+}
+
+/* ----- ⑤ 費用管理 ----- */
+function viewMoney(){
+  let h=needFamily()+`<section class="card">${tabs('money',[['month','今月の精算'],['history','履歴'],['summary','集計']],S.sub.money)}${monthNav()}`;
+  if(S.sub.money==='month')h+=moneyMonth();
+  else if(S.sub.money==='history')h+=moneyHistory();
+  else h+=moneySummary();
+  return h+'</section>';
+}
+function moneyMonth(){
+  const items=shareItems(S.month);
+  const tr=transfers(S.month);
+  let h=`<div class="row between"><h2>${mnum(S.month)}の精算</h2>${tr.length?'<span class="pill orange">未精算あり</span>':items.length?'<span class="pill">精算済み</span>':''}</div>
+    <p class="note">テニスコート代金はその日に誰かが立て替えて払い、ほかの家庭は月に1回まとめて立て替えた人に払います。</p>`;
+  h+=items.length?`<div class="lines">${items.map(it=>{const up=upfront(it);return `<div class="line"><div><div>・${esc(it.label)}</div><div class="sub">${esc(it.sub)}</div><div class="sub">${up.length?'立替：'+up.map(x=>esc(famLabel(x.memberId))).join('、'):'<span style="color:var(--red)">まだ誰も払っていません</span>'}</div></div><div style="text-align:right"><span class="amt">${yen(it.amount)}</span>${!up.length&&S.family.length?`<br><button class="link" data-act="sheet" data-k="pay" data-p="${it.costId?'':it.practiceId}" data-m="${it.costId||''}">払った</button>`:''}</div></div>`}).join('')}</div>`:'<p class="note">今月の費用はまだありません。テニスコート代金のある練習や、ボール代などを登録するとここに出ます。</p>';
+  const b=myBal(S.month);
+  if(b&&(b.owe||b.paid)){
+    const bal=Math.round(b.bal);
+    h+=`<div class="bill${bal<0?'':' ok'}"><span class="l">${bal<0?'月末に支払う金額':bal>0?'月末に受け取る金額':'ご家庭の精算'}</span><span class="v">${Math.abs(bal).toLocaleString('ja-JP')}<small>円</small></span>
+      <span class="note" style="text-align:right">負担額 ${yen(b.owe)} ・ 立て替え・支払い済み ${yen(b.paid)}${b.recv?' ・ 受け取り済み '+yen(b.recv):''}</span></div>`;
+    const days=items.filter(it=>!it.costId&&S.family.some(id=>it.ids.includes(id)));
+    if(days.length)h+=`<h3>${mnum(S.month)}の参加履歴（${days.length}回）</h3><div class="lines">${days.map(it=>{const kids=S.family.filter(id=>it.ids.includes(id));const mineUp=upfront(it).some(x=>mineFam(x.memberId));return `<div class="line" style="align-items:center"><div>${mdw(it.date)} <span class="small muted">${S.family.length>1?kids.map(name).join('・'):''}</span></div><div class="row" style="gap:10px"><span class="amt">${yen(it.share*kids.length)}</span>${mineUp?'<span class="pill">立替</span>':''}</div></div>`}).join('')}</div>`;
+  }
+  // 払う側（未払い）は管理者と本人の家庭だけに表示する
+  const mine=tr.map((o,i)=>({...o,i})).filter(o=>S.admin||mineFam(o.from));
+  h+=`<h3>${S.admin?'支払う金額（全家庭）':'あなたの家庭が支払う金額'}</h3>`;
+  h+=mine.length?`<div class="lines">${mine.map(o=>`<div class="line" style="align-items:center"><div>${S.admin?`<strong>${esc(famLabel(o.from))}</strong> → `:''}<strong>${esc(famLabel(o.to))}</strong>${S.admin?'':' へ'}</div><div class="row" style="gap:10px"><span class="amt">${yen(o.amount)}</span>${S.confirm==='settle:'+o.i?`<button class="btn sm primary" data-act="settle" data-k="${o.i}">払ったので記録</button>`:`<button class="pill red" style="border:0" data-act="confirm" data-k="settle:${o.i}">未払い</button>`}</div></div>`).join('')}</div><p class="note">お金を渡したら「未払い」を押して記録してください。${S.admin?'この一覧は管理者画面と、支払う本人の家庭にだけ表示されます。':'この金額は、あなたの家庭と管理者にだけ表示されます。'}</p>`:'<p class="note">支払いが必要な金額はありません。</p>';
+  if(!S.admin){const inc=tr.filter(o=>mineFam(o.to)).reduce((s,o)=>s+o.amount,0);if(inc)h+=`<p class="note">あなたの家庭が受け取る予定：<strong>${yen(inc)}</strong>（支払う側の名前は管理者だけが確認できます）</p>`}
+  h+=paidTable(S.month);
+  return h;
+}
+function paidTable(m){
+  // 払った金額はみんなに公開
+  const by={};
+  for(const x of S.payments.filter(x=>payMonth(x)===m&&mem(x.memberId))){
+    const k=famKey(x.memberId);by[k]=by[k]||{up:0,settle:0};
+    if(x.to)by[k].settle+=Number(x.amount||0);else by[k].up+=Number(x.amount||0);
+  }
+  const keys=Object.keys(by);
+  return `<h3>${mnum(m)}に払った金額（全員に公開）</h3>`+(keys.length?`<div class="scroll"><table><thead><tr><th class="sticky">家庭</th><th class="num">テニスコート代金などの立替</th><th class="num">精算で払った</th><th class="num">合計</th></tr></thead><tbody>${keys.map(k=>`<tr${mineFam(k)?' class="mine"':''}><td class="sticky">${esc(famLabel(k))}<div class="small muted">${S.members.filter(x=>famKey(x._id)===k).map(x=>esc(x.name)).join('・')}</div></td><td class="num">${by[k].up?yen(by[k].up):'—'}</td><td class="num">${by[k].settle?yen(by[k].settle):'—'}</td><td class="num"><strong>${yen(by[k].up+by[k].settle)}</strong></td></tr>`).join('')}</tbody></table></div>`:'<p class="note">今月はまだ誰も払っていません。</p>');
+}
+function moneyHistory(){
+  const list=S.payments.filter(x=>payMonth(x)===S.month).sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
+  let h=S.family.length?`<div class="row"><button class="btn sm primary" data-act="sheet" data-k="pay">${ic('plus')}支払いを記録</button><button class="btn sm" data-act="sheet" data-k="cost">${ic('plus')}ボール代・備品代を追加</button></div>`:'';
+  if(!list.length)return h+`<p class="note">${monthLabel(S.month)}の支払い記録はまだありません。</p>`;
+  return h+`<div class="lines">${list.map(x=>{const pr=practice(x.practiceId),c=S.costs.find(y=>y._id===x.costId);const can=S.admin||isMine(x.memberId);return `<div class="line"><div><div><strong>${mdw(x.date)}</strong> ${esc(famLabel(x.memberId))}</div><div class="sub">${x.to?esc(famLabel(x.to))+'へ精算':'会計・コートへ'}${c?' ・ '+esc(c.kind):pr?' ・ '+md(pr.date)+'のテニスコート代金':''}${x.note?' ・ '+esc(x.note):''}</div></div><div class="row" style="gap:8px"><span class="amt">${yen(x.amount)}</span>${can?(S.confirm==='pay:'+x._id?`<button class="btn sm danger" data-act="delPay" data-r="${x._id}">削除</button>`:`<button class="link muted" data-act="confirm" data-k="pay:${x._id}">削除</button>`):''}</div></div>`}).join('')}</div>`;
+}
+function moneySummary(){
+  if(!S.members.length)return '<p class="note">選手が登録されていません。</p>';
+  const F=famBalances(S.month);
+  let h=paidTable(S.month);
+  // 払う側の一覧は管理者だけ。保護者には自分の家庭の分だけ
+  const keys=Object.keys(F).filter(k=>S.admin||mineFam(k)).filter(k=>F[k].owe||F[k].paid||F[k].recv);
+  h+=`<h3>${S.admin?mnum(S.month)+'の負担と差額（全家庭・管理者のみ）':mnum(S.month)+'のあなたの家庭'}</h3>`;
+  h+=keys.length?`<div class="scroll"><table><thead><tr><th class="sticky">家庭</th><th class="num">負担額</th><th class="num">払った</th><th class="num">受け取った</th><th class="num">月末の精算</th></tr></thead><tbody>${keys.map(k=>{const x=F[k],b=Math.round(x.bal);return `<tr${mineFam(k)?' class="mine"':''}><td class="sticky">${esc(famLabel(k))}<div class="small muted">${S.members.filter(m=>famKey(m._id)===k).map(m=>esc(m.name)).join('・')}</div></td><td class="num">${yen(x.owe)}</td><td class="num">${yen(x.paid)}</td><td class="num">${yen(x.recv)}</td><td class="num ${b<0?'minus':b>0?'plus':''}">${b<0?'支払う '+yen(-b):b>0?'受け取る '+yen(b):'済み'}</td></tr>`}).join('')}</tbody></table></div>`:'<p class="note">今月の負担はありません。</p>';
+  h+=`<p class="note">負担額は参加した練習のテニスコート代金などを参加者で割った額（${S.settings.round||10}円単位で切り上げ）です。欠席した日の負担はありません。${S.admin?'この表は管理者だけに表示されます。':'ほかの家庭の負担額は管理者だけが確認できます。'}</p>`;
+  const costs=S.costs.filter(c=>inMonth(c.date)).sort((a,b)=>a.date.localeCompare(b.date));
+  if(costs.length)h+=`<h3>ボール代・備品代など</h3><div class="lines">${costs.map(c=>`<div class="line"><div><div>${mdw(c.date)} ${esc(c.kind)}</div><div class="sub">${c.split==='practice'?'練習の参加者で割る':'全員で割る'}${c.note?' ・ '+esc(c.note):''}</div></div><div class="row" style="gap:8px"><span class="amt">${yen(c.amount)}</span>${S.admin||mineFam(c.createdBy)?(S.confirm==='c:'+c._id?`<button class="btn sm danger" data-act="delCost" data-r="${c._id}">削除</button>`:`<button class="link muted" data-act="confirm" data-k="c:${c._id}">削除</button>`):''}</div></div>`).join('')}</div>`;
+  return h;
+}
+
+/* ----- ⑥ 連絡・緊急連絡 ----- */
+function postItem(p){
+  const cs=S.comments.filter(c=>c.postId===p._id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const reads=new Set(S.reads.filter(x=>x.postId===p._id&&mem(x.memberId)).map(x=>famKey(x.memberId)));
+  const likes=S.likes.filter(x=>x.postId===p._id);
+  const liked=likes.some(x=>mineFam(x.memberId));
+  const canDel=S.admin||mineFam(p.authorId);
+  const pr=practice(p.practiceId);
+  return `<article class="post">${av(p.authorId||'x',famLabel(p.authorId))}<div class="grow">
+    <div class="row between"><span class="meta"><strong style="color:var(--ink)">${esc(famLabel(p.authorId))}</strong>　${p.createdAt?stamp(p.createdAt):''}</span>${p.level==='emergency'?'<span class="pill solid-red">緊急</span>':p.level==='important'?'<span class="pill red">重要</span>':''}</div>
+    <strong>${p.pinned?'📌 ':''}${esc(p.title)}</strong>
+    ${pr?`<span class="meta">対象：${mdw(pr.date)} ${esc(pr.place)}</span>`:''}
+    ${p.body?`<p class="body">${esc(p.body)}</p>`:''}
+    <div class="foot"><button class="like${liked?' on':''}" data-act="like" data-r="${p._id}" ${S.family.length?'':'disabled'} aria-pressed="${liked}">${ic('thumb')}${likes.length}</button><span>既読 ${reads.size}/${famCount()}</span><button class="like" data-act="toggle" data-k="cm:${p._id}">返信 ${cs.length}</button>
+      ${p.level!=='normal'&&S.family.length?(confirmed(p._id)?'<span class="pill">確認済み</span>':`<button class="btn sm primary" data-act="confirmRead" data-r="${p._id}">確認しました</button>`):''}
+      ${S.admin?`<button class="link muted" data-act="pin" data-r="${p._id}">${p.pinned?'固定を外す':'固定'}</button>`:''}
+      ${canDel?(S.confirm==='post:'+p._id?`<button class="btn sm danger" data-act="delPost" data-r="${p._id}">本当に削除</button>`:`<button class="link muted" data-act="confirm" data-k="post:${p._id}">削除</button>`):''}</div>
+    ${S.open['cm:'+p._id]?cs.map(c=>`<div class="comment"><strong>${esc(famLabel(c.authorId))}</strong> <span class="meta">${stamp(c.createdAt)}</span><br>${esc(c.body)}${S.admin||mineFam(c.authorId)?` <button class="link muted" data-act="delComment" data-r="${c._id}">削除</button>`:''}</div>`).join('')+(S.family.length?`<form class="row" data-form="comment" data-r="${p._id}" style="flex-wrap:nowrap"><input class="btn grow" style="text-align:left;font-weight:400" id="cm-${p._id}" aria-label="返信" data-draft="cm.${p._id}" value="${esc(draft('cm.'+p._id,''))}" placeholder="返信を書く"><button class="btn sm primary">送信</button></form>`:''):''}
+  </div></article>`;
+}
+function viewTalk(){
+  const t=S.sub.talk;
+  let posts=S.posts.slice();
+  if(t==='all')posts=posts.filter(p=>!p.practiceId);
+  else if(t==='practice')posts=posts.filter(p=>p.practiceId);
+  else posts=posts.filter(p=>p.level!=='normal');
+  posts.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(b.createdAt||0)-(a.createdAt||0));
+  let h=needFamily()+`<section class="card">${tabs('talk',[['all','全体連絡'],['practice','練習日ごと'],['important','重要連絡']],t)}`;
+  h+=posts.length?`<div>${posts.map(postItem).join('')}</div>`:`<div class="empty"><strong>まだ連絡はありません</strong><span>集合場所の変更や持ち物のお知らせを投稿できます。雨天中止などは「緊急」で投稿してください。</span></div>`;
+  h+=`</section>`;
+  if(S.family.length)h+=`<button class="btn primary block" data-act="sheet" data-k="post">${ic('plus')}連絡を投稿</button>`;
+  h+=`<button class="pcard" data-act="tab" data-k="safety"><span class="av ride">${ic('shield')}</span><div class="grow"><strong>緊急連絡・安全管理</strong><span class="note">責任者・連絡先・緊急時の手順</span></div><span class="chev">${ic('chev')}</span></button>`;
+  return h;
+}
+function viewSafety(){
+  const s=S.settings;
+  let h=`<section class="card"><h2>緊急時の連絡手順</h2>
+    <div class="lines"><div class="line"><span class="muted">活動の責任者</span><span>${esc(s.leader||'未設定')}</span></div><div class="line"><span class="muted">緊急連絡先</span><span>${esc(s.contact||'未設定')}</span></div></div>
+    ${s.procedure?`<p style="white-space:pre-wrap;margin:0">${esc(s.procedure)}</p>`:'<p class="note">けが・事故・急な天候悪化のときの手順は、管理者が管理者画面で登録します。</p>'}
+    <div class="notice"><div class="t">${ic('alert')}通知について</div><p>このアプリはプッシュ通知を送りません。雨天中止などの緊急連絡を確認していない家庭には、責任者が電話などで連絡してください。</p></div></section>`;
+  const em=S.posts.filter(p=>p.level==='emergency').sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,5);
+  if(em.length)h+=`<section class="card"><h2>最近の緊急連絡</h2><div>${em.map(postItem).join('')}</div></section>`;
+  return h;
+}
+
+/* ----- ⑦ 練習記録 ----- */
+function recPhotos(r){return (r&&r.photos)||[]}
+function recordCard(p){
+  const r=p.record||{};const ph=recPhotos(r);
+  const menu=(r.menu||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  let h=`<article class="card"><div class="row between"><h2>${jdate(p.date)}（${wd(p.date)}）</h2><button class="link" data-act="sheet" data-k="record" data-p="${p._id}">編集</button></div>
+    <span class="note">${esc(p.place)} ${esc(p.court)}番コート ・ 参加 ${attendees(p._id).length}名</span>`;
+  if(ph[0])h+=`<img class="photo-main" src="${esc(ph[0].url||'')}" alt="${jdate(p.date)}の練習の写真">`;
+  if(menu.length)h+=`<div class="numh"><b>1</b>練習メニュー</div><ul class="menu">${menu.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
+  if(r.memo||r.next)h+=`<div class="numh"><b>2</b>気づき・メモ</div><p class="tx">${esc([r.memo,r.next?'次回の課題：'+r.next:''].filter(Boolean).join('\n'))}</p>`;
+  if(r.balls)h+=`<p class="note">使ったボール・備品：${esc(r.balls)}</p>`;
+  h+=`<div class="numh"><b>3</b>写真</div><div class="photos">${ph.map(x=>`<div class="ph"><img src="${esc(x.url||'')}" alt="練習の写真" loading="lazy">${S.assets&&(S.admin||mineFam(x.by))?`<button data-act="delPhoto" data-p="${p._id}" data-r="${esc(x.id)}" aria-label="写真を削除">×</button>`:''}</div>`).join('')}${S.assets&&S.family.length?`<button class="add" data-act="addPhoto" data-p="${p._id}" aria-label="写真を追加">+</button>`:''}</div>`;
+  if(S.open['consent:'+p._id])h+=`<div class="warn"><label class="check"><input type="checkbox" id="consent-${p._id}" data-draft-check="consent"> 写っている生徒とその保護者の了承を得ています（写真はこのページを開ける全員に表示されます）</label><div class="actions" style="margin-top:6px"><button class="btn sm" data-act="close" data-k="consent:${p._id}">やめる</button><button class="btn sm primary" data-act="pickPhoto" data-p="${p._id}">写真を選ぶ</button></div></div>`;
+  if(!S.assets)h+=`<p class="note">写真の追加は、ログインした家庭か管理者ができます。</p>`;
+  if(r.by)h+=`<p class="note">記入：${esc(famLabel(r.by))}${r.at?' ・ '+stamp(r.at):''}</p>`;
+  return h+'</article>';
+}
+function viewRecord(){
+  const t=S.sub.record;
+  const recs=S.practices.filter(p=>p.record).sort((a,b)=>b.date.localeCompare(a.date));
+  let h=`<section class="card" style="padding-bottom:4px">${tabs('record',[['menu','練習メニュー'],['activity','活動記録'],['event','大会情報']],t)}</section>`;
+  if(t==='menu'){
+    h+=recs.length?recs.slice(0,10).map(recordCard).join(''):`<div class="empty"><strong>練習記録はまだありません</strong><span>練習が終わったら、メニュー・気づき・写真を残しておけます。</span></div>`;
+  }else if(t==='activity'){
+    const past=S.practices.filter(p=>p.date<=today()).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);
+    h+=past.length?`<section class="card"><div class="plist">${past.map(p=>`<button class="prow" style="background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;width:100%" data-act="${p.record?'recTab':'sheet'}" data-k="record" data-p="${p._id}"><span class="av car">${ic('record')}</span><div class="grow"><strong>${mdw(p.date)}</strong> ${esc(p.place)}<div class="small muted">${p.status==='cancelled'?'中止':'参加 '+attendees(p._id).length+'名'}${p.record?' ・ 記録あり':' ・ 記録なし（押すと書けます）'}</div></div>${p.record?'<span class="pill">記録あり</span>':''}</button>`).join('')}</div></section>`:'<p class="note">終わった練習はまだありません。</p>';
+  }else{
+    const ev=recs.filter(p=>p.record.info);
+    h+=ev.length?ev.map(p=>`<section class="card"><div class="row between"><strong>${mdw(p.date)}の記録より</strong><button class="link" data-act="sheet" data-k="record" data-p="${p._id}">編集</button></div><p class="body" style="white-space:pre-wrap;margin:0">${esc(p.record.info)}</p></section>`).join(''):`<div class="empty"><strong>大会情報はまだありません</strong><span>練習記録の「大会・お知らせ」欄に書いた内容がここに集まります。</span></div>`;
+  }
+  return h+`<button class="btn primary block" data-act="sheet" data-k="record">${ic('plus')}記録を作成</button>`;
+}
+
+/* ----- 月間参加記録 ----- */
+function statsTable(withMoney){
+  const ps=monthPractices().filter(p=>p.status!=='cancelled');
+  if(!S.members.length)return `<div class="empty"><strong>選手がまだ登録されていません</strong><span>「マイページ」からお子さんを登録してください。</span></div>`;
+  const {L}=withMoney?ledger(S.month):{L:{}};
+  let h=`<div class="scroll"><table><thead><tr><th class="sticky">選手</th><th class="num">参加日数</th>${withMoney?'<th class="num">負担額</th><th class="num">差額</th>':''}${ps.map(p=>`<th class="c">${md(p.date)}<br><span style="font-weight:400">${wd(p.date)}</span></th>`).join('')}<th>参加した日</th></tr></thead><tbody>`;
+  for(const m of S.members){
+    const days=ps.filter(p=>resp(p._id,m._id)?.attend==='yes');const set=new Set(days.map(p=>p._id));
+    const b=L[m._id];
+    h+=`<tr${isMine(m._id)?' class="mine"':''}><td class="sticky"><strong>${esc(m.name)}</strong></td><td class="num">${days.length}日</td>${withMoney?`<td class="num">${yen(b.owe)}</td><td class="num ${b.bal<0?'minus':b.bal>0?'plus':''}">${b.bal>0?'+':b.bal<0?'−':''}${yen(Math.abs(b.bal))}</td>`:''}
+      ${ps.map(p=>`<td class="c">${set.has(p._id)?'<span class="mk" title="参加"></span>':'<span class="mk off" title="参加なし"></span>'}</td>`).join('')}
+      <td style="white-space:normal;min-width:150px" class="small muted">${days.length?days.map(p=>mdw(p.date)).join('、'):'—'}</td></tr>`;
+  }
+  return h+`</tbody></table></div><p class="note">「参加」で登録された練習（管理者が追加した分を含む）を参加日として数えています（中止を除く練習${ps.length}回）。● 参加 ／ ○ 参加なし</p>`;
+}
+
+/* ----- マイページ ----- */
+// プッシュ通知のオン・オフ
+function pushState(){const P=TENNIS.push;return {perm:P.permission(),on:!!P.token()&&P.permission()==='granted'}}
+function pushCard(full){
+  if(!window.TENNIS||S.session==='admin')return '';
+  const st=pushState();
+  if(st.perm==='unsupported')return `<p class="note">この端末やブラウザでは通知を受け取れません。${/iPhone|iPad/.test(navigator.userAgent)?'iPhone は「ホーム画面に追加」したアプリから開くと使えます。':''}</p>`;
+  if(st.perm==='denied')return '<p class="note" style="color:var(--red)">通知がブラウザの設定でブロックされています。ブラウザ（またはスマートフォン）の設定で、このサイトの通知を許可してください。</p>';
+  if(st.on)return `<div class="row between"><span class="pill">この端末で通知を受け取っています</span>${full?'<button class="link muted" data-act="pushOff">通知をオフにする</button>':''}</div>`;
+  return `<button class="btn primary${full?'':' block'}" data-act="pushOn">${ic('bell')}この端末で通知を受け取る</button>`;
+}
+function viewMe(){
+  if(S.session==='admin')return `<section class="card"><h2>管理者としてひらいています</h2><p class="note">お子さんの家庭としてログインしていないため、参加登録や支払いの記録はできません。家庭として使うときは「☰」→「ログアウト」から、お子さんを選んでログインしてください。</p></section>`;
+  let h=`<section class="card"><h2>わたしの家族（お子さん）</h2><div class="plist">${S.family.map(m=>`<div class="prow">${av(m)}<span class="grow"><strong>${esc(name(m))}</strong> <span class="small muted">${mem(m)?.parent?esc(mem(m).parent)+'さん':''}</span></span></div>`).join('')}</div>`;
+  h+=`<form class="fgrid" data-form="member"><h3 class="wide">兄弟姉妹を追加</h3>
+    <div class="field"><label for="nm-name">お子さんの名前</label><input id="nm-name" data-draft="nm.name" value="${esc(draft('nm.name',''))}" placeholder="例：山田 次郎"></div>
+    <div class="field"><label for="nm-parent">保護者名（任意）</label><input id="nm-parent" data-draft="nm.parent" value="${esc(draft('nm.parent',mem(S.family[0])?.parent||''))}"></div>
+    <div class="actions wide"><button class="btn sm primary">家族に追加</button></div></form>
+    <p class="note">同じパスワードで、兄弟姉妹の参加登録もまとめてできます。すでに名簿にいる兄弟姉妹を家族にまとめたいときは、管理担当の方に頼んでください。</p></section>`;
+  if(S.family.length){
+    const ps=monthPractices().filter(p=>p.status!=='cancelled');const due=Math.max(0,-Math.round(myBal(S.month)?.bal||0));
+    h+=`<section class="card"><h2>${monthLabel(S.month)}のわが家</h2><div class="plist">${S.family.map(m=>{const d=ps.filter(p=>resp(p._id,m)?.attend==='yes');return `<div class="prow">${av(m)}<div class="grow"><strong>${esc(name(m))}</strong><div class="small muted">参加 ${d.length}日${d.length?'：'+d.map(p=>mdw(p.date)).join('、'):''}</div></div></div>`}).join('')}</div>
+      <div class="line"><span>未精算</span><span class="amt ${due>0?'minus':''}">${yen(due)}</span></div></section>`;
+  }
+  h+=`<section class="card" id="push"><h2>通知の設定</h2>${pushCard(true)}
+    <p class="note">練習予定・送迎・連絡の新規登録や変更、管理者が参加を記録したときに、この端末に通知が届きます。通知は端末ごとの設定です。家族のスマートフォンそれぞれでオンにしてください。</p>
+    <p class="note"><strong>iPhone の場合</strong>：Safari の共有ボタン →「ホーム画面に追加」で追加したアプリから開いて、オンにしてください（iOS 16.4 以降）。</p></section>`;
+  return h;
+}
+
+/* ----- 管理者画面 (PC) ----- */
+function viewAdmin(){
+  const next=upcoming().find(p=>p.status!=='cancelled');
+  const cnt=p=>{const r=S.responses.filter(x=>x.practiceId===p._id&&mem(x.memberId)&&x.attend==='yes');return {y:r.length,w:r.filter(x=>x.walkIn).length,o:S.members.length-r.length}};
+  const nc=next?cnt(next):null;
+  const unpaid=unpaidFamilies(S.month).size;
+  const side=[['a-dash','dash','ダッシュボード'],['a-plan','plan','予定管理'],['a-att','check','参加管理'],['a-ride','car','送迎調整'],['a-money','money','費用管理'],['a-talk','talk','連絡掲示板'],['a-rec','record','練習記録'],['a-mem','users','メンバー管理'],['a-set','gear','設定'],['a-pw','shield','ログイン']];
+  let h=`<div class="admin"><nav class="side" aria-label="管理メニュー"><div class="row" style="padding:6px 10px 10px;font-weight:900"><span class="ball"></span>テニス部連絡ノート</div>${side.map(([id,i,l])=>`<button class="navitem" data-act="jump" data-k="${id}">${ic(i)}${l}</button>`).join('')}</nav><div class="main">`;
+  h+=`<section class="card" id="a-dash"><h2>ダッシュボード</h2><div class="kpis">
+    <div class="card kpi" style="box-shadow:none"><span class="ic g">${ic('clock')}</span><div><div class="small muted">次回の練習</div><div class="v">${next?mdw(next.date):'—'}</div>${next?`<div class="small muted">${esc(next.place)}</div>`:''}</div></div>
+    <div class="card kpi" style="box-shadow:none"><span class="ic o">${ic('users')}</span><div><div class="small muted">参加予定</div><div class="v">${nc?nc.y:0}名</div><div class="small muted">${next?md(next.date)+' ・ 登録なし '+nc.o+'名':''}</div></div></div>
+    <div class="card kpi" style="box-shadow:none"><span class="ic r">${ic('money')}</span><div><div class="small muted">未精算</div><div class="v">${unpaid}世帯</div><div class="small muted">${mnum(S.month)}分の費用</div></div></div>
+  </div></section>`;
+  const list=upcoming().slice(0,10);
+  h+=`<section class="card" id="a-plan"><div class="row between"><h2>直近の予定一覧</h2><button class="btn sm primary" data-act="newPractice">${ic('plus')}予定を作成</button></div>`+(list.length?`<div class="scroll"><table><thead><tr><th>日付</th><th>時間</th><th>場所</th><th class="num">参加</th><th class="num">うち管理者追加</th><th>操作</th></tr></thead><tbody>${list.map(p=>{const c=cnt(p);return `<tr><td>${mdw(p.date)} ${p.status==='cancelled'?'<span class="pill solid-red">中止</span>':''}</td><td>${esc(p.start||'')}${p.end?'-'+esc(p.end):''}</td><td>${esc(p.place)} ${esc(p.court)}番</td><td class="num">${c.y}</td><td class="num">${c.w}</td><td><button class="btn sm outline" data-act="openDetail" data-p="${p._id}" data-k="attend">詳細</button></td></tr>`}).join('')}</tbody></table></div>`:'<p class="note">これからの予定はありません。</p>')+`</section>`;
+  const from=addDays(today(),-14);
+  const att=S.practices.filter(p=>p.date>=from&&p.date<=addDays(today(),7)&&p.status!=='cancelled').sort(byDate);
+  h+=`<section class="card" id="a-att"><h2>参加管理（当日参加した子の追加）</h2><p class="note">保護者の登録なしで来た子を、練習ごとに参加者として追加できます。直近2週間と今後1週間の練習を表示しています。</p>`+(att.length?`<div class="lines">${att.map(p=>{const c=cnt(p);return `<div class="line" style="align-items:center"><div><strong>${mdw(p.date)}</strong> ${esc(p.place)}<div class="sub">参加 ${c.y}名${c.w?'（うち管理者追加 '+c.w+'名）':''}</div></div><div class="row"><button class="btn sm primary" data-act="sheet" data-k="walkin" data-p="${p._id}">${ic('plus')}参加した子を追加</button><button class="btn sm" data-act="openDetail" data-p="${p._id}" data-k="attend">一覧</button></div></div>`}).join('')}</div>`:'<p class="note">対象の練習はありません。</p>')+`${monthNav()}<h3>${monthLabel(S.month)}の参加記録と精算</h3>${statsTable(true)}</section>`;
+  const rideNeed=upcoming().filter(p=>p.status!=='cancelled').map(p=>{const C=rideCtx(p);return {p,need:C.riders.length,done:C.accepted.length,cars:C.drivers.length}}).filter(x=>x.need||x.cars);
+  h+=`<section class="card" id="a-ride"><h2>送迎調整</h2>`+(rideNeed.length?`<div class="lines">${rideNeed.map(x=>`<div class="line"><div><strong>${mdw(x.p.date)}</strong> 車 ${x.cars}台 ・ 希望 ${x.need}人 ・ 決定 ${x.done}件</div><button class="btn sm outline" data-act="goRide" data-p="${x.p._id}">調整する</button></div>`).join('')}</div>`:'<p class="note">送迎の登録はまだありません。</p>')+`</section>`;
+  const {items}=ledger(S.month);
+  h+=`<section class="card" id="a-money"><h2>費用管理（${mnum(S.month)}）</h2><div class="lines">${items.map(it=>`<div class="line"><div>${esc(it.label)}<div class="sub">${esc(it.sub)}</div></div><span class="amt">${yen(it.amount)}</span></div>`).join('')||'<p class="note">費用はまだありません。</p>'}</div><div class="row"><button class="btn sm outline" data-act="goMoneySum">家庭ごとの集計を見る</button><button class="btn sm" data-act="sheet" data-k="cost">${ic('plus')}ボール代・備品代を追加</button></div></section>`;
+  const imp=S.posts.filter(p=>p.level!=='normal').sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,5);
+  h+=`<section class="card" id="a-talk"><div class="row between"><h2>重要連絡の確認状況</h2><button class="btn sm primary" data-act="sheet" data-k="post">${ic('plus')}連絡を投稿</button></div>`+(imp.length?`<div class="lines">${imp.map(p=>{const ok=new Set(S.reads.filter(x=>x.postId===p._id&&x.confirmed&&mem(x.memberId)).map(x=>famKey(x.memberId)));const all=[...new Set(S.members.map(m=>m.family||m._id))];const ng=all.filter(k=>!ok.has(k));return `<div class="line"><div><strong>${esc(p.title)}</strong><div class="sub">確認 ${ok.size}/${all.length}家庭${ng.length?' ・ 未確認：'+ng.map(k=>esc(famLabel(k))).join('、'):''}</div></div></div>`}).join('')}</div><p class="note">未確認の家庭には電話などで連絡してください。</p>`:'<p class="note">重要連絡はまだありません。</p>')+`</section>`;
+  const recN=S.practices.filter(p=>p.record).length,noRec=S.practices.filter(p=>p.date<today()&&p.status!=='cancelled'&&!p.record).length;
+  h+=`<section class="card" id="a-rec"><h2>練習記録</h2><p class="note">記録あり ${recN}件 ・ 記録のない終わった練習 ${noRec}件</p><button class="btn sm outline" data-act="tab" data-k="record" style="align-self:flex-start">練習記録を開く</button></section>`;
+  h+=`<section class="card" id="a-mem"><h2>メンバー管理</h2>
+    <form data-form="member-admin" class="fgrid"><h3 class="wide">選手の登録</h3>
+      <div class="field"><label for="ma-name">選手名</label><input id="ma-name" data-draft="ma.name" value="${esc(draft('ma.name',''))}" placeholder="例：山田 太郎"></div>
+      <div class="field"><label for="ma-parent">保護者名</label><input id="ma-parent" data-draft="ma.parent" value="${esc(draft('ma.parent',''))}" placeholder="例：山田 花子"></div>
+      <div class="field wide"><label for="ma-fam">家庭</label><select id="ma-fam" data-draft="ma.fam"><option value="">新しい家庭</option>${[...new Set(S.members.map(m=>famKey(m._id)))].map(k=>`<option value="${esc(k)}"${draft('ma.fam','')===k?' selected':''}>${esc(famOf(k).map(name).join('・'))}の兄弟姉妹</option>`).join('')}</select></div>
+      <div class="actions wide"><button class="btn sm primary">登録する</button></div></form>`;
+  if(S.members.length){
+    h+=`<div class="scroll"><table><thead><tr><th>選手名</th><th>保護者名</th><th>家族</th><th class="num">通算参加</th><th></th></tr></thead><tbody>`;
+    for(const m of S.members){
+      const tot=S.responses.filter(r=>r.memberId===m._id&&r.attend==='yes'&&S.practices.some(p=>p._id===r.practiceId&&p.status!=='cancelled')).length;
+      const sib=S.members.filter(x=>x._id!==m._id&&famKey(x._id)===famKey(m._id)).map(x=>x.name);
+      h+=S.open['mem:'+m._id]?`<tr><td><input class="btn sm" style="font-weight:400" aria-label="選手名" id="em-n-${m._id}" data-draft="em.${m._id}.n" value="${esc(draft('em.'+m._id+'.n',m.name))}"></td><td><input class="btn sm" style="font-weight:400" aria-label="保護者名" id="em-p-${m._id}" data-draft="em.${m._id}.p" value="${esc(draft('em.'+m._id+'.p',m.parent||''))}"></td><td>${esc(sib.join('、')||'—')}</td><td class="num">${tot}日</td><td><button class="btn sm primary" data-act="saveMember" data-r="${m._id}">保存</button> <button class="link muted" data-act="close" data-k="mem:${m._id}">やめる</button></td></tr>`
+      :`<tr><td><strong>${esc(m.name)}</strong></td><td>${esc(m.parent||'—')}</td><td>${sib.length?'兄弟：'+esc(sib.join('、')):'—'}</td><td class="num">${tot}日</td><td><button class="link" data-act="open" data-k="mem:${m._id}">編集</button> ${S.confirm==='m:'+m._id?`<button class="btn sm danger" data-act="delMember" data-r="${m._id}">本当に削除（卒業・退部）</button>`:`<button class="link muted" data-act="confirm" data-k="m:${m._id}">削除</button>`}</td></tr>`;
+    }
+    h+='</tbody></table></div>';
+  }else h+='<p class="note">まだ選手が登録されていません。保護者が「マイページ」から登録します。</p>';
+  h+=`<p class="note">保護者には、このアプリのURLと登録コードを個別に伝えてください。卒業・退部した家庭は、ここで選手を削除してください（ログインもできなくなります）。</p></section>`;
+  const s=S.settings;
+  h+=`<form class="card" id="a-set" data-form="settings"><h2>設定（運用ルール・緊急連絡）</h2><div class="fgrid">
+    <div class="field"><label for="st-round">割り勘の端数</label><select id="st-round" data-draft="st.round">${[1,10,50,100].map(n=>`<option value="${n}"${String(draft('st.round',s.round||10))===String(n)?' selected':''}>${n}円単位で切り上げ</option>`).join('')}</select></div>
+    <div class="field"><label for="st-leader">活動の責任者</label><input id="st-leader" data-draft="st.leader" value="${esc(draft('st.leader',s.leader||''))}" placeholder="例：保護者代表 山田"></div>
+    <div class="field"><label for="st-contact">緊急連絡先</label><input id="st-contact" data-draft="st.contact" value="${esc(draft('st.contact',s.contact||''))}" placeholder="共有してよい連絡先だけ"></div>
+    <div class="field wide"><label for="st-proc">緊急時の手順</label><textarea id="st-proc" data-draft="st.procedure" placeholder="例：1. けがをしたら練習を止める 2. 責任者に連絡 3. 保護者へ電話">${esc(draft('st.procedure',s.procedure||''))}</textarea></div></div>
+    <p class="note">連絡先はこのページを開ける全員に表示されます。個人の電話番号は本人の了承を取ってから載せてください。</p>
+    <div class="actions"><button class="btn sm primary">保存する</button></div></form>`;
+  const fams=[...new Set(S.members.map(m=>famKey(m._id)))];
+  if(!S.authStatus&&!S.authLoading){S.authLoading=true;TENNIS.call('authStatus').then(r=>{S.authStatus=r.families}).catch(e=>toast(errMsg(e))).finally(()=>{S.authLoading=false;scheduleRender()})}
+  const AS=S.authStatus||{};
+  h+=`<section class="card" id="a-pw"><h2>ログインとパスワード</h2>
+    <p class="note">保護者は、お子さんを選び、<strong>登録コード</strong>を入れてはじめのパスワードを決めます。登録コードは家庭ごとに1回だけ使えて、使うと消えます。コードは本人に直接（個別のLINEや手渡し）伝えてください。グループには流さないでください。パスワードと登録コードはサーバーだけが確認し、誰も見ることはできません。</p>
+    ${!S.authStatus?'<p class="note">読み込み中…</p>':fams.length?`<div class="lines">${fams.map(k=>{const a=AS[k]||{},code=S.codes[k];return `<div class="line" style="align-items:center"><div><strong>${esc(famOf(k).map(name).join('・'))}</strong><div class="sub">${a.setAt?'パスワード設定済み'+(a.setAt>1?'（'+stamp(a.setAt)+'）':''):a.invitedAt?'登録コード発行済み・まだ設定していません':'未登録（登録コードが必要）'}</div>${code?`<div style="margin-top:4px">登録コード：<strong style="font-size:20px;letter-spacing:.15em">${code}</strong> <span class="small muted">（この画面を閉じると再表示できません）</span></div>`:''}</div>
+      <div class="row">${a.setAt?(S.confirm==='pwr:'+k?`<button class="btn sm danger" data-act="pwReset" data-k="${esc(k)}">本当にリセット</button>`:`<button class="link muted" data-act="confirm" data-k="pwr:${esc(k)}">パスワードをリセット</button>`):`<button class="btn sm primary" data-act="issueCode" data-k="${esc(k)}">${a.invitedAt?'コードを再発行':'登録コードを発行'}</button>`}</div></div>`}).join('')}</div>`:'<p class="note">まだ家庭がありません。下の「選手の登録」から登録してください。</p>'}
+    <form data-form="admin-change" class="fgrid"><h3 class="wide">管理者パスワードの変更</h3>
+      <div class="field"><label for="ac-1">新しい管理者パスワード（8文字以上）</label><input id="ac-1" type="password" autocomplete="new-password" data-draft="ac-1" value=""></div>
+      <div class="field"><label for="ac-2">もう一度入力</label><input id="ac-2" type="password" autocomplete="new-password" data-draft="ac-2" value=""></div>
+      <div class="actions wide"><button class="btn sm primary">変更する</button></div></form></section>`;
+  return h+'</div></div>';
+}
+
+/* ---------- sheets (forms) ---------- */
+function sheetBody(){
+  const k=S.sheet,c=S.ctx;
+  const close=`<button type="button" class="btn sm" data-act="closeSheet">やめる</button>`;
+  if(k==='practice'||k==='dup'||k==='new'){
+    const P=c.p?practice(c.p):null;
+    const base=k==='practice'&&P?{...P}:k==='dup'&&P?{...P,date:addDays(P.date,7),deadline:P.deadline?addDays(P.deadline.slice(0,10),7)+P.deadline.slice(10):''}:{date:today(),start:'09:00',end:'12:00'};
+    S.ctx.base=base;
+    const v=f=>esc(draft('pf.'+f,base[f]??''));
+    const places=[...new Set(S.practices.map(p=>p.place).filter(Boolean))];
+    return `<form data-form="practice" class="fgrid"><h2 class="wide">${k==='practice'?'練習予定を編集':k==='dup'?'予定を複製して作成':'予定を作成'}</h2>
+      <div class="field"><label for="pf-date">日付</label><input id="pf-date" type="date" required data-draft="pf.date" value="${v('date')}"></div>
+      <div class="field"><label for="pf-start">開始</label><input id="pf-start" type="time" data-draft="pf.start" value="${v('start')}"></div>
+      <div class="field"><label for="pf-end">終了</label><input id="pf-end" type="time" data-draft="pf.end" value="${v('end')}"></div>
+      <div class="field wide"><label for="pf-place">テニスコート名</label><input id="pf-place" list="places" required data-draft="pf.place" value="${v('place')}" placeholder="例：市営テニスコート"><datalist id="places">${places.map(p=>`<option value="${esc(p)}">`).join('')}</datalist></div>
+      <div class="field"><label for="pf-court">コート番号</label><input id="pf-court" required data-draft="pf.court" value="${v('court')}" placeholder="例：A・B / 3"></div>
+      <div class="field"><label for="pf-fee">テニスコート代金（合計・円）</label><input id="pf-fee" type="number" min="0" step="10" inputmode="numeric" data-draft="pf.fee" value="${v('fee')}" placeholder="例：4000"></div>
+      <div class="field"><label for="pf-mt">集合時間</label><input id="pf-mt" type="time" data-draft="pf.meetTime" value="${v('meetTime')}"></div>
+      <div class="field"><label for="pf-mp">集合場所</label><input id="pf-mp" data-draft="pf.meetPlace" value="${v('meetPlace')}" placeholder="例：駐車場"></div>
+      <div class="field wide"><label for="pf-dl">回答締切</label><input id="pf-dl" type="datetime-local" data-draft="pf.deadline" value="${v('deadline')}"></div>
+      <div class="field wide"><label for="pf-bring">持ち物（「、」で区切る）</label><input id="pf-bring" data-draft="pf.bring" value="${v('bring')}" placeholder="例：ラケット、水筒、タオル、帽子"></div>
+      <div class="field wide"><label for="pf-note">メモ</label><input id="pf-note" data-draft="pf.note" value="${v('note')}" placeholder="例：天気予報が雨の場合は当日7:00に判断"></div>
+      <div class="actions wide">${close}<button class="btn primary">${k==='practice'?'保存する':'作成する'}</button></div></form>`;
+  }
+  if(k==='driver'||k==='rider'){
+    const p=practice(c.p);const kids=S.family;const m0=c.m||draft('rg.m',kids[0]);const r=resp(p._id,m0)||{};
+    return `<form data-form="${k}" class="fgrid"><h2 class="wide">${k==='driver'?'車を出せる登録':'乗せてほしい登録'}（${mdw(p.date)}）</h2>
+      <div class="field"><label for="rg-m">${k==='driver'?'参加するお子さん':'乗せてほしいお子さん'}</label><select id="rg-m" data-draft="rg.m">${kids.map(m=>`<option value="${m}"${m===m0?' selected':''}>${esc(name(m))}</option>`).join('')}</select></div>
+      ${k==='driver'?`<div class="field"><label for="rg-seats">ほかに乗せられる人数</label><select id="rg-seats" data-draft="rg.seats">${[1,2,3,4,5,6].map(n=>`<option value="${n}"${String(draft('rg.seats',r.seats||3))===String(n)?' selected':''}>${n}人</option>`).join('')}</select></div>
+      <div class="field wide"><label for="rg-route">出発時刻と経路</label><input id="rg-route" data-draft="rg.route" value="${esc(draft('rg.route',r.route||''))}" placeholder="例：8:20 ○○小学校前 → コート"></div>`
+      :`<div class="field wide"><label for="rg-pick">乗る場所</label><input id="rg-pick" data-draft="rg.pickup" value="${esc(draft('rg.pickup',r.pickup||''))}" placeholder="例：○○小学校前"></div>`}
+      <p class="note wide">お子さんは「参加」で登録されます。住所や電話番号は書かず、待ち合わせ場所だけを書いてください。</p>
+      <div class="actions wide">${r.transport===(k==='driver'?'can':'cannot')?`<button type="button" class="btn danger" data-act="unregister" data-p="${p._id}" data-m="${m0}">登録を取り消す</button>`:''}${close}<button class="btn primary">登録する</button></div></form>`;
+  }
+  if(k==='adminAuth'){
+    return `<form data-form="admin-reauth" class="fgrid"><h2 class="wide">管理者画面</h2>
+      ${S.adminReady?`<div class="field wide"><label for="ar-pw">管理者パスワード</label><input id="ar-pw" type="password" autocomplete="current-password" data-draft="ar-pw" value=""></div>
+      <div class="actions wide">${close}<button class="btn primary">ひらく</button></div>`:`<p class="note wide">管理者パスワードがまだ設定されていません。ログアウトして「管理者としてひらく」から、セットアップキーを使って設定してください。</p><div class="actions wide">${close}</div>`}</form>`;
+  }
+  if(k==='share'){
+    return `<h2>${esc(c.title)}</h2>
+      <p class="note">${c.personal?'アプリを開いたときにも、対象の保護者のお知らせに表示されます。スマートフォンに知らせたいときは、<strong>その保護者に個別に</strong>LINEで送ってください（グループには送らないでください）。':'このアプリはスマートフォンにプッシュ通知を送れません。保護者のLINEグループに送ると、みんなのスマートフォンに通知が届きます。'}</p>
+      <div class="field"><label for="sh-text">送る文章（直してから送れます）</label><textarea id="sh-text" data-draft="sh.text" style="min-height:180px">${esc(draft('sh.text',c.text))}</textarea></div>
+      <div class="actions"><button type="button" class="btn" data-act="closeSheet">送らない</button><button type="button" class="btn" data-act="copyShare">文章をコピー</button><a class="btn primary" id="sh-link" href="https://line.me/R/share?text=${encodeURIComponent(draft('sh.text',c.text))}" target="_blank" rel="noopener">LINEで送る</a></div>
+      <p class="note">「LINEで送る」でLINEが開いたら、送り先に${c.personal?'その保護者':'保護者のグループ'}を選んでください。開かないときは「文章をコピー」してLINEに貼り付けてください。</p>`;
+  }
+  if(k==='walkin'){
+    const p=practice(c.p);const off=S.members.filter(m=>resp(p._id,m._id)?.attend!=='yes');
+    return `<form data-form="walkin" class="fgrid"><h2 class="wide">参加した子を追加（${mdw(p.date)}）</h2>
+      <p class="note wide">保護者の登録なしで来た子にチェックしてください。追加した子は「管理者が追加」と表示され、参加日数・テニスコート代金の割り勘・その家庭の1か月のテニスコート代金に自動で入ります。</p>
+      ${off.length?`<div class="plist wide">${off.map(m=>`<label class="prow check" style="align-items:center"><input type="checkbox" data-draft-check="wi.${m._id}" ${draft('wi.'+m._id,false)?'checked':''}> ${av(m._id)}<span class="grow"><strong>${esc(m.name)}</strong> <span class="small muted">${m.parent?esc(m.parent)+'さん':''}</span></span></label>`).join('')}</div>`:'<p class="note wide">登録済みの選手は全員参加になっています。</p>'}
+      <p class="note wide">選べるのはアプリに登録されている子だけです。名簿にいない子は、先に「メンバー管理」で登録してください。追加すると、その子の保護者のアプリにお知らせが出ます。</p>
+      <div class="actions wide">${close}<button class="btn primary">参加者に追加</button></div></form>`;
+  }
+  if(k==='ask'){
+    const p=practice(c.p);const C=rideCtx(p);
+    return `<form data-form="ask" class="fgrid"><h2 class="wide">${esc(name(c.m))}さんの送迎をお願いする</h2>
+      <div class="field wide"><label for="as-to">お願いする相手</label><select id="as-to" data-draft="as.to"><option value="">車を出せる方どなたでも</option>${C.drivers.filter(d=>!isMine(d.memberId)).map(d=>`<option value="${d.memberId}"${draft('as.to','')===d.memberId?' selected':''}>${esc(famLabel(d.memberId))}（空き${Math.max(0,(d.seats||0)-C.used(d))}人）</option>`).join('')}</select></div>
+      <div class="field wide"><label for="as-msg">ひとこと（任意）</label><input id="as-msg" data-draft="as.msg" value="${esc(draft('as.msg',''))}" placeholder="行きだけお願いします など"></div>
+      <div class="actions wide">${close}<button class="btn primary">お願いを送る</button></div></form>`;
+  }
+  if(k==='pay'){
+    const pr=c.p?practice(c.p):null,cst=c.m?S.costs.find(x=>x._id===c.m):null;
+    if(cst)return `<form data-form="pay" class="fgrid"><h2 class="wide">${esc(cst.kind)}を立て替えた</h2>
+      <div class="field"><label for="py-m">立て替えた人</label><select id="py-m" data-draft="py.m">${S.members.map(m=>`<option value="${m._id}"${draft('py.m',rep())===m._id?' selected':''}>${esc(famLabel(m._id))}（${esc(m.name)}）</option>`).join('')}</select></div>
+      <div class="field"><label for="py-a">金額（円）</label><input id="py-a" type="number" min="0" inputmode="numeric" data-draft="py.a" value="${esc(draft('py.a',cst.amount))}"></div>
+      <div class="field"><label for="py-d">支払った日</label><input id="py-d" type="date" data-draft="py.d" value="${esc(draft('py.d',cst.date||today()))}"></div>
+      <div class="actions wide">${close}<button class="btn primary">記録する</button></div></form>`;
+    if(pr)return `<form data-form="pay" class="fgrid"><h2 class="wide">テニスコート代金を払った（${mdw(pr.date)}）</h2>
+      <p class="note wide">その日のテニスコート代金を全額払った人を記録します。ほかの家庭の分は月末にまとめて精算します。</p>
+      <div class="field"><label for="py-m">払った人</label><select id="py-m" data-draft="py.m">${S.members.map(m=>`<option value="${m._id}"${draft('py.m',rep())===m._id?' selected':''}>${esc(famLabel(m._id))}（${esc(m.name)}）</option>`).join('')}</select></div>
+      <div class="field"><label for="py-a">金額（円）</label><input id="py-a" type="number" min="0" inputmode="numeric" data-draft="py.a" value="${esc(draft('py.a',pr.fee||''))}"></div>
+      <div class="field"><label for="py-d">支払った日</label><input id="py-d" type="date" data-draft="py.d" value="${esc(draft('py.d',pr.date<=today()?pr.date:today()))}"></div>
+      <div class="actions wide">${close}<button class="btn primary">記録する</button></div></form>`;
+    return `<form data-form="pay" class="fgrid"><h2 class="wide">支払いを記録</h2>
+      <div class="field"><label for="py-m">支払った人</label><select id="py-m" data-draft="py.m">${S.members.map(m=>`<option value="${m._id}"${draft('py.m',rep())===m._id?' selected':''}>${esc(famLabel(m._id))}（${esc(m.name)}）</option>`).join('')}</select></div>
+      <div class="field"><label for="py-t">支払い先</label><select id="py-t" data-draft="py.t"><option value="">会計・コート・お店</option>${S.members.map(m=>`<option value="${m._id}"${draft('py.t','')===m._id?' selected':''}>${esc(famLabel(m._id))}へ精算</option>`).join('')}</select></div>
+      <div class="field"><label for="py-d">支払った日</label><input id="py-d" type="date" data-draft="py.d" value="${esc(draft('py.d',today()))}"></div>
+      <div class="field"><label for="py-a">金額（円）</label><input id="py-a" type="number" min="0" inputmode="numeric" data-draft="py.a" value="${esc(draft('py.a',pr?pr.fee:''))}"></div>
+      <div class="field wide"><label for="py-p">対象の練習</label><select id="py-p" data-draft="py.p"><option value="">指定なし</option>${S.practices.slice().sort(byDate).filter(p=>inMonth(p.date)||p._id===c.p).map(p=>`<option value="${p._id}"${draft('py.p',c.p||'')===p._id?' selected':''}>${mdw(p.date)} ${esc(p.place)}</option>`).join('')}</select></div>
+      <div class="field wide"><label for="py-n">メモ</label><input id="py-n" data-draft="py.n" value="${esc(draft('py.n',''))}" placeholder="例：コート受付で現金払い"></div>
+      <p class="note wide">テニスコート代金を全額払ったときは「会計・コート・お店」、月末の精算でほかの家庭に払ったときはその家庭を選んでください。</p>
+      <div class="actions wide">${close}<button class="btn primary">記録する</button></div></form>`;
+  }
+  if(k==='cost'){
+    return `<form data-form="cost" class="fgrid"><h2 class="wide">ボール代・備品代を追加</h2>
+      <div class="field"><label for="c-kind">種類</label><select id="c-kind" data-draft="c.kind">${['ボール代','備品代','その他'].map(x=>`<option${draft('c.kind','ボール代')===x?' selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="field"><label for="c-date">日付</label><input id="c-date" type="date" data-draft="c.date" value="${esc(draft('c.date',today()))}"></div>
+      <div class="field"><label for="c-amt">金額（円）</label><input id="c-amt" type="number" min="0" inputmode="numeric" data-draft="c.amount" value="${esc(draft('c.amount',''))}"></div>
+      <div class="field"><label for="c-split">負担する人</label><select id="c-split" data-draft="c.split"><option value="all"${draft('c.split','all')==='all'?' selected':''}>登録している全員で割る</option><option value="practice"${draft('c.split','all')==='practice'?' selected':''}>選んだ練習の参加者で割る</option></select></div>
+      <div class="field wide"><label for="c-p">対象の練習</label><select id="c-p" data-draft="c.practiceId"><option value="">指定なし</option>${monthPractices().map(p=>`<option value="${p._id}"${draft('c.practiceId','')===p._id?' selected':''}>${mdw(p.date)} ${esc(p.place)}</option>`).join('')}</select></div>
+      <div class="field wide"><label for="c-note">メモ</label><input id="c-note" data-draft="c.note" value="${esc(draft('c.note',''))}" placeholder="例：新品購入・3か月分"></div>
+      <div class="field wide"><label for="c-payer">立て替えた人</label><select id="c-payer" data-draft="c.payer"><option value="">まだ払っていない</option>${S.members.map(m=>`<option value="${m._id}"${draft('c.payer',rep()||'')===m._id?' selected':''}>${esc(famLabel(m._id))}（${esc(m.name)}）</option>`).join('')}</select></div>
+      <div class="actions wide">${close}<button class="btn primary">追加する</button></div></form>`;
+  }
+  if(k==='post'){
+    return `<form data-form="post" class="fgrid"><h2 class="wide">連絡を投稿</h2>
+      <div class="field wide"><label for="po-title">件名</label><input id="po-title" data-draft="po.title" value="${esc(draft('po.title',''))}" placeholder="例：10/24 の練習について"></div>
+      <div class="field wide"><label for="po-body">本文</label><textarea id="po-body" data-draft="po.body">${esc(draft('po.body',''))}</textarea></div>
+      <div class="field"><label for="po-level">種類</label><select id="po-level" data-draft="po.level">${[['normal','通常'],['important','重要（確認してもらう）'],['emergency','緊急（雨天中止・急な変更）']].map(([v,l])=>`<option value="${v}"${draft('po.level','normal')===v?' selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label for="po-p">関係する練習</label><select id="po-p" data-draft="po.practiceId"><option value="">全体の連絡</option>${upcoming().map(p=>`<option value="${p._id}"${draft('po.practiceId',c.p||'')===p._id?' selected':''}>${mdw(p.date)} ${esc(p.place)}</option>`).join('')}</select></div>
+      ${S.admin?`<label class="check wide"><input type="checkbox" id="po-pin" data-draft-check="po.pinned" ${draft('po.pinned',false)?'checked':''}> 上部に固定表示する（管理者）</label>`:''}
+      <div class="actions wide">${close}<button class="btn primary">投稿する</button></div></form>`;
+  }
+  if(k==='record'){
+    const cand=S.practices.filter(p=>p.date<=today()&&p.status!=='cancelled').sort((a,b)=>b.date.localeCompare(a.date));
+    const pid=draft('rc.p',c.p||(cand.find(p=>!p.record)||cand[0])?._id||'');
+    const pr=practice(pid);const r=pr?.record||{};const f=(x,def)=>esc(draft('rc.'+x,r[x]??def??''));
+    if(!cand.length)return `<h2>記録を作成</h2><p class="note">終わった練習がまだありません。練習日を過ぎると記録を書けます。</p><div class="actions">${close}</div>`;
+    return `<form data-form="record" class="fgrid"><h2 class="wide">${pr?.record?'練習記録を編集':'練習記録を作成'}</h2>
+      <div class="field wide"><label for="rc-p">練習日</label><select id="rc-p" data-draft="rc.p">${cand.map(p=>`<option value="${p._id}"${p._id===pid?' selected':''}>${mdw(p.date)} ${esc(p.place)}${p.record?'（記録あり）':''}</option>`).join('')}</select></div>
+      <div class="field wide"><label for="rc-menu">練習メニュー（1行に1つ）</label><textarea id="rc-menu" data-draft="rc.menu" placeholder="ウォーミングアップ（20分）&#10;ラリー練習（30分）&#10;サーブ練習（30分）&#10;試合形式（40分）">${f('menu')}</textarea></div>
+      <div class="field wide"><label for="rc-memo">気づき・メモ</label><textarea id="rc-memo" data-draft="rc.memo" placeholder="例：サーブの確率が上がってきた。">${f('memo')}</textarea></div>
+      <div class="field wide"><label for="rc-next">次回の課題</label><input id="rc-next" data-draft="rc.next" value="${f('next')}" placeholder="例：リターン練習を多めに"></div>
+      <div class="field"><label for="rc-balls">使ったボール・備品</label><input id="rc-balls" data-draft="rc.balls" value="${f('balls')}" placeholder="例：練習球2缶"></div>
+      <div class="field"><label for="rc-info">大会・お知らせ</label><input id="rc-info" data-draft="rc.info" value="${f('info')}" placeholder="例：11/15 市民大会 申込締切 11/1"></div>
+      <p class="note wide">写真は保存したあと、記録カードの「＋」から追加できます。生徒の成績は載せないでください。</p>
+      <div class="actions wide">${close}<button class="btn primary">保存する</button></div></form>`;
+  }
+  return '';
+}
+
+/* ---------- actions ---------- */
+async function setResp(pid,mid,patch){
+  const cur=resp(pid,mid);
+  const next={practiceId:pid,memberId:mid,attend:cur?.attend||null,transport:cur?.transport||null,seats:cur?.seats??0,route:cur?.route||'',pickup:cur?.pickup||'',...patch,updatedAt:Date.now()};
+  return write(()=>col('responses').doc(pid+'__'+mid).set(next));
+}
+function clearDrafts(prefix){for(const k of Object.keys(S.drafts))if(k.startsWith(prefix))delete S.drafts[k]}
+function go(tab){S.tab=tab;S.detail=null;S.drawer=false;S.bell=false;S.confirm=null;try{localStorage.setItem('tennis.tab',tab)}catch(_){}window.scrollTo({top:0})}
+function openSheet(k,ctx){S.sheet=k;S.ctx=ctx||{};S.drawer=false;S.bell=false}
+function closeSheet(){S.sheet=null;S.ctx={};['pf.','rg.','as.','py.','c.','po.','rc.'].forEach(clearDrafts)}
+async function markRead(){
+  const r=rep();if(!r||!S.db)return;
+  const todo=S.posts.filter(p=>!readDoc(p._id)).slice(0,30);
+  for(const p of todo){try{await col('reads').doc(p._id+'__'+r).set({postId:p._id,memberId:r,at:Date.now(),confirmed:false})}catch(_){break}}
+}
+const FIELDS={date:'日付',start:'開始',end:'終了',place:'コート',court:'コート番号',fee:'テニスコート代金',meetTime:'集合時間',meetPlace:'集合場所',bring:'持ち物',deadline:'回答締切',note:'メモ'};
+
+document.addEventListener('click',async e=>{
+  if(e.target.closest('[data-stop]')&&!e.target.closest('[data-act]'))return;
+  const b=e.target.closest('[data-act]');if(!b||b.tagName==='SELECT'||b.tagName==='INPUT')return;
+  const a=b.dataset.act,k=b.dataset.k,p=b.dataset.p,r=b.dataset.r,m=b.dataset.m;
+  if(a==='closeOverlay'&&b!==e.target)return;
+  if(a!=='confirm'&&!a.startsWith('del')&&a!=='payAll')S.confirm=null;
+  switch(a){
+    case 'tab':if(k==='admin'&&!S.admin){S.drawer=false;openSheet('adminAuth',{});break}go(k);if(k==='talk')markRead();break;
+    case 'drawer':S.drawer=true;S.bell=false;break;
+    case 'bell':S.bell=!S.bell;S.drawer=false;if(S.bell){S.bellSince=S.seenAt;saveSeen()}break;
+    case 'closeOverlay':S.drawer=false;S.bell=false;if(S.sheet)closeSheet();break;
+    case 'closeSheet':closeSheet();break;
+    case 'back':S.detail=null;window.scrollTo({top:0});break;
+    case 'sub':if(b.dataset.g==='dtab')S.dtab=k;else S.sub[b.dataset.g]=k;break;
+    case 'openDetail':S.detail=p;S.dtab=k||'summary';S.attFilter='yes';S.drawer=false;S.bell=false;window.scrollTo({top:0});break;
+    case 'attFilter':S.attFilter=k;break;
+    case 'planMode':S.planMode=S.planMode==='stats'?'list':'stats';break;
+    case 'goRide':{const pid=p||upcoming().find(x=>x.status!=='cancelled')?._id;if(!pid){go('plan');break}
+      S.drawer=false;S.bell=false;S.detail=pid;S.dtab='ride';S.sub.ride=k||(S.rides.some(x=>x.practiceId===pid&&x.status==='open'&&x.toId&&isMine(x.toId))?'result':S.sub.ride);window.scrollTo({top:0});break}
+    case 'ridePick':S.ridePid=p;break;
+    case 'goMoney':go('money');S.sub.money='month';if(k)S.month=k;break;
+    case 'goMoneySum':go('money');S.sub.money='summary';break;
+    case 'goTalk':go('talk');S.sub.talk=k||'all';markRead();break;
+    case 'recTab':go('record');S.sub.record='menu';break;
+    case 'jump':document.getElementById(k)?.scrollIntoView({behavior:'smooth',block:'start'});return;
+    case 'month':S.month=(()=>{const [y,mm]=S.month.split('-').map(Number);return ym(new Date(y,mm-1+Number(k),1))})();break;
+    case 'open':S.open[k]=true;break;
+    case 'toggle':S.open[k]=!S.open[k];break;
+    case 'close':S.open[k]=false;break;
+    case 'confirm':S.confirm=k||null;break;
+    case 'sheet':openSheet(k,{p,m});break;
+    case 'newPractice':openSheet('new',{});break;
+    case 'delPractice':S.confirm=null;
+      if(await write(()=>col('practices').doc(p).delete(),'練習予定を削除しました')){
+        S.detail=null;
+        for(const x of S.responses.filter(x=>x.practiceId===p))await write(()=>col('responses').doc(x._id).delete());
+        for(const x of S.rides.filter(x=>x.practiceId===p))await write(()=>col('rides').doc(x._id).delete());
+      }break;
+    case 'uncancel':{const pr=practice(p);await write(()=>col('practices').doc(p).update({status:'scheduled',cancelReason:'',history:[...(pr.history||[]),{at:Date.now(),text:'中止を取り消し、予定どおり実施',by:rep()||''}]}),'中止を取り消しました');offerShare(practiceText(pr,'（中止を取り消し、予定どおり実施）'));break}
+    case 'attend':await setResp(p,m,k?{attend:'yes',walkIn:false}:{attend:null,transport:null});break;
+    case 'adminAttend':if(!S.admin)break;if(await setResp(p,m,k?{attend:'yes',walkIn:true,addedAt:Date.now()}:{attend:null,transport:null,walkIn:false})&&k)offerWalkIn(p,[m]);break;
+    case 'unregister':if(await setResp(p,m,{transport:null}))closeSheet();break;
+    case 'take':{const rideShare=()=>{const pr=practice(p);offerShare(`【テニス部 送迎決定】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.place}\n${name(m)}さんは${famLabel(rep())}の車に乗ります。\n待ち合わせ：${resp(p,m)?.pickup||'あとで連絡します'}\n\n${APP_URL}`,'送迎の決定をLINEで知らせる')};
+      const C=rideCtx(practice(p));const myD=C.drivers.find(d=>isMine(d.memberId));if(!myD)break;
+      const req=C.rides.find(x=>x.fromId===m&&x.status!=='accepted');const pick=resp(p,m)?.pickup||'';
+      if(req)await write(()=>col('rides').doc(req._id).update({status:'accepted',byId:myD.memberId,meetPoint:pick,updatedAt:Date.now()}),'送迎が決まりました')&&rideShare();
+      else await write(()=>col('rides').add({practiceId:p,fromId:m,toId:myD.memberId,message:'',status:'accepted',byId:myD.memberId,meetPoint:pick,createdAt:Date.now()}),'送迎が決まりました')&&rideShare();
+      break}
+    case 'rideAccept':{const x=S.rides.find(y=>y._id===r);const myD=S.responses.find(y=>y.practiceId===x.practiceId&&isMine(y.memberId)&&y.transport==='can');if(await write(()=>col('rides').doc(r).update({status:'accepted',byId:myD?.memberId||rep(),meetPoint:resp(x.practiceId,x.fromId)?.pickup||'',updatedAt:Date.now()}),'送迎を引き受けました')){const pr=practice(x.practiceId);offerShare(`【テニス部 送迎決定】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.place}\n${name(x.fromId)}さんは${famLabel(rep())}の車に乗ります。\n待ち合わせ：${resp(x.practiceId,x.fromId)?.pickup||'あとで連絡します'}\n\n${APP_URL}`,'送迎の決定をLINEで知らせる')}break}
+    case 'rideDecline':await write(()=>col('rides').doc(r).update({status:'declined',updatedAt:Date.now()}));break;
+    case 'rideUndo':await write(()=>col('rides').doc(r).delete(),'送迎の決定を取り消しました');break;
+    case 'rideDel':await write(()=>col('rides').doc(r).delete(),'依頼を取り消しました');break;
+    case 'pwReset':{S.confirm=null;if(!S.admin)break;try{await TENNIS.call('resetPassword',{fam:k});S.authStatus=null;toast('リセットしました。登録コードを発行して保護者に伝えてください')}catch(e){toast(errMsg(e))}break}
+    case 'logout':S.drawer=false;await TENNIS.logout();return;
+    case 'loginBack':S.login={step:'pick'};S.lockErr='';clearDrafts('ls.');clearDrafts('le.');break;
+    case 'adminLogin':S.login={step:'admin'};S.lockErr='';break;
+    case 'issueCode':{if(!S.admin)break;try{const r=await TENNIS.call('issueCode',{fam:k});S.codes={...(S.codes||{}),[k]:r.code};S.authStatus=null;toast('登録コードを発行しました')}catch(e){toast(errMsg(e))}break}
+    case 'pushOn':{try{await TENNIS.push.enable(S.session);toast('この端末で通知を受け取ります')}catch(e){toast(e.code==='denied'?'通知が許可されませんでした。ブラウザの設定で許可してください。':e.code==='unsupported'?'この端末やブラウザでは通知を受け取れません。':'通知をオンにできませんでした。')}break}
+    case 'pushOff':await TENNIS.push.disable();toast('この端末の通知をオフにしました');break;
+    case 'pushLater':S.pushDismissed=true;break;
+    case 'settle':{
+      S.confirm=null;
+      const o=transfers(S.month)[Number(k)];if(!o)break;
+      await write(()=>col('payments').add({memberId:o.from,to:o.to,practiceId:'',costId:'',settle:true,month:S.month,date:today(),amount:o.amount,note:mnum(S.month)+'分の精算',createdAt:Date.now()}),'精算を記録しました');
+      break}
+    case 'delPay':S.confirm=null;await write(()=>col('payments').doc(r).delete(),'支払い記録を削除しました');break;
+    case 'delCost':S.confirm=null;await write(()=>col('costs').doc(r).delete(),'費用を削除しました');break;
+    case 'confirmRead':if(rep())await write(()=>col('reads').doc(r+'__'+rep()).set({postId:r,memberId:rep(),at:Date.now(),confirmed:true}),'確認済みにしました');break;
+    case 'like':{if(!rep())break;const id=r+'__'+rep();const had=S.likes.some(x=>x._id===id);await write(()=>had?col('likes').doc(id).delete():col('likes').doc(id).set({postId:r,memberId:rep(),at:Date.now()}));break}
+    case 'pin':{const po=S.posts.find(x=>x._id===r);await write(()=>col('posts').doc(r).update({pinned:!po.pinned}));break}
+    case 'delPost':S.confirm=null;await write(()=>col('posts').doc(r).delete(),'連絡を削除しました');break;
+    case 'delComment':await write(()=>col('comments').doc(r).delete());break;
+    case 'delMember':S.confirm=null;await write(()=>col('members').doc(r).delete(),'選手を削除しました');if(isMine(r))await setFamily(S.family.filter(x=>x!==r));break;
+    case 'saveMember':{
+      const mm=mem(r);const n=String(draft('em.'+r+'.n',mm.name)).trim();
+      if(!n){toast('選手名を入力してください');return}
+      if(await write(()=>col('members').doc(r).update({name:n,parent:String(draft('em.'+r+'.p',mm.parent||'')).trim()}),'保存しました')){S.open['mem:'+r]=false;clearDrafts('em.'+r)}
+      break}
+    case 'addPhoto':S.open['consent:'+p]=true;S.drafts.consent=false;break;
+    case 'pickPhoto':if(!S.drafts.consent){toast('了承を得ていることにチェックしてください');return}S.photoFor=p;document.getElementById('photo-input').click();return;
+    case 'delPhoto':{
+      const pr=practice(p);const ph=recPhotos(pr.record).filter(x=>x.id!==r);
+      try{await S.assets.delete(r)}catch(err){if(err&&err.code==='not_uploader'){toast('ほかの人が追加した写真は削除できません');return}}
+      await write(()=>col('practices').doc(p).update({record:{...pr.record,photos:ph}}),'写真を削除しました');break}
+  }
+  render();
+});
+document.addEventListener('change',async e=>{
+  const t=e.target;
+  if(t.dataset.draftCheck){S.drafts[t.dataset.draftCheck]=t.checked;return}
+  if(t.dataset.draft){S.drafts[t.dataset.draft]=t.value;if(t.dataset.draft==='rg.m'||t.dataset.draft==='rc.p'){if(t.dataset.draft==='rc.p')['rc.menu','rc.memo','rc.next','rc.balls','rc.info'].forEach(x=>delete S.drafts[x]);else{S.ctx.m=t.value;['rg.seats','rg.route','rg.pickup'].forEach(x=>delete S.drafts[x])}renderOverlay(todoItems())}return}
+  if(t.dataset.actChange==='fam'){const id=t.value;await setFamily(t.checked?[...S.family.filter(x=>x!==id),id]:S.family.filter(x=>x!==id));render();return}
+  if(t.dataset.actChange==='bring'){const key='tennis.bring.'+t.dataset.p;let c={};try{c=JSON.parse(localStorage.getItem(key)||'{}')}catch(_){}c[t.value]=t.checked;try{localStorage.setItem(key,JSON.stringify(c))}catch(_){}render();return}
+  if(t.id==='photo-input'&&t.files&&t.files[0]){const f=t.files[0];t.value='';await uploadPhoto(S.photoFor,f);render()}
+});
+document.addEventListener('input',e=>{const k=e.target.dataset.draft;if(k)S.drafts[k]=e.target.value;if(k==='sh.text'){const a=document.getElementById('sh-link');if(a)a.href='https://line.me/R/share?text='+encodeURIComponent(e.target.value)}});
+document.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const f=e.target,kind=f.dataset.form,c=S.ctx;
+  const T=k=>String(draft(k,'')??'').trim();
+  if(kind==='member'){
+    const n=T('nm.name');if(!n){toast('お子さんの名前を入力してください');return}
+    if(!S.session||S.session==='admin'){toast('家庭としてログインしてから追加してください');return}
+    const ref=col('members').doc();
+    if(await write(()=>ref.set({name:n,parent:T('nm.parent')||mem(S.family[0])?.parent||'',family:S.session,createdAt:Date.now()}),n+'さんを家族に追加しました')){clearDrafts('nm.');S.family=[...S.family,ref.id]}
+  }
+  if(kind==='practice'){
+    const base=c.base||{};const g=x=>String(draft('pf.'+x,base[x]??'')??'').trim();
+    const data={date:g('date'),start:g('start'),end:g('end'),place:g('place'),court:g('court').replace(/番(コート)?$/,''),fee:g('fee')?Number(g('fee')):0,meetTime:g('meetTime'),meetPlace:g('meetPlace'),deadline:g('deadline'),bring:g('bring'),note:g('note')};
+    if(!data.date||!data.place||!data.court){toast('日付・テニスコート名・コート番号を入力してください');return}
+    if(S.sheet==='practice'){
+      const P=practice(c.p);
+      const changes=Object.keys(FIELDS).filter(x=>String(P[x]??'')!==String(data[x]??'')).map(x=>`${FIELDS[x]}：${P[x]||'なし'} → ${data[x]||'なし'}`);
+      const hist=[...(P.history||[])];if(changes.length)hist.push({at:Date.now(),text:changes.join('、'),by:rep()||''});
+      if(await write(()=>col('practices').doc(c.p).update({...data,history:hist}),'練習予定を更新しました')){closeSheet();if(changes.length)offerShare(practiceText({...P,...data},'の変更',changes.join('、')))}
+    }else{
+      Object.assign(data,{status:'scheduled',history:[],createdBy:rep()||'',createdAt:Date.now()});
+      if(await write(()=>col('practices').add(data),'練習予定を作成しました')){closeSheet();S.month=data.date.slice(0,7);offerShare(practiceText(data,''))}
+    }
+  }
+  if(kind==='cancel'){
+    const p=f.dataset.p,pr=practice(p),reason=T('cr.'+p)||'中止します';
+    if(await write(()=>col('practices').doc(p).update({status:'cancelled',cancelReason:reason,history:[...(pr.history||[]),{at:Date.now(),text:'中止：'+reason,by:rep()||''}]}),'中止にしました')){
+      if(draft('cn.'+p,true))await write(()=>col('posts').add({title:`${mdw(pr.date)} ${pr.place} の練習は中止です`,body:reason,level:'emergency',pinned:false,practiceId:p,authorId:rep()||'',createdAt:Date.now()}));
+      S.open['cancel:'+p]=false;clearDrafts('cr.'+p);
+      offerShare(`【テニス部 練習中止】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.start||''} ${pr.place}の練習は中止です。\n理由：${reason}\n\n${APP_URL}`,'中止をLINEで知らせる');
+    }
+  }
+  if(kind==='driver'||kind==='rider'){
+    const m=draft('rg.m',c.m||S.family[0]);const r=resp(c.p,m)||{};
+    const patch=kind==='driver'?{attend:'yes',transport:'can',seats:Number(draft('rg.seats',r.seats||3)),route:T('rg.route')||r.route||''}:{attend:'yes',transport:'cannot',pickup:T('rg.pickup')||r.pickup||''};
+    if(await setResp(c.p,m,patch)){toast('登録しました');closeSheet()}
+  }
+  if(kind==='walkin'){
+    if(!S.admin)return;
+    const ids=S.members.filter(m=>draft('wi.'+m._id,false)&&resp(c.p,m._id)?.attend!=='yes').map(m=>m._id);
+    if(!ids.length){toast('追加する子を選んでください');return}
+    let ok=true;for(const id of ids)ok=(await setResp(c.p,id,{attend:'yes',walkIn:true,addedAt:Date.now()}))&&ok;
+    if(ok){toast(ids.length+'人を参加者に追加しました');clearDrafts('wi.');closeSheet();offerWalkIn(c.p,ids)}
+  }
+  if(kind==='ask'){
+    if(await write(()=>col('rides').add({practiceId:c.p,fromId:c.m,toId:T('as.to'),message:T('as.msg'),status:'open',byId:null,meetPoint:'',createdAt:Date.now()}),'送迎のお願いを送りました')){closeSheet();const pr=practice(c.p);const to=T('as.to');offerShare(`【テニス部 送迎のお願い】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.place}\n${name(c.m)}さんの送迎を${to?famLabel(to)+'に':'車を出せる方に'}お願いしたいです。${T('as.msg')?'\n'+T('as.msg'):''}\n乗る場所：${resp(c.p,c.m)?.pickup||'未記入'}\n\n引き受けられる方はアプリから\n${APP_URL}`,'送迎のお願いをLINEで知らせる')}
+  }
+  if(kind==='pay'){
+    const pr=c.p?practice(c.p):null,cst=c.m?S.costs.find(x=>x._id===c.m):null;
+    const amt=Number(draft('py.a',cst?cst.amount:pr?pr.fee:'')||0),mid=draft('py.m',rep()),to=pr||cst?'':T('py.t');
+    const d=draft('py.d',cst?cst.date:pr?(pr.date<=today()?pr.date:today()):today());
+    if(!mid||!amt){toast('支払った人と金額を入力してください');return}
+    if(to&&to===mid){toast('支払った人と支払い先が同じです');return}
+    const pid=cst?'':pr?pr._id:draft('py.p','');
+    // which month this payment belongs to: the court day / cost date, otherwise the payment date
+    const month=(cst?cst.date:pid?practice(pid)?.date:d||'').slice(0,7)||d.slice(0,7);
+    if(await write(()=>col('payments').add({memberId:mid,to,practiceId:pid,costId:cst?cst._id:'',settle:!!to,month,date:d,amount:amt,note:T('py.n'),createdAt:Date.now()}),'支払いを記録しました'))closeSheet();
+  }
+  if(kind==='cost'){
+    const amt=Number(draft('c.amount',0)),split=draft('c.split','all'),pid=draft('c.practiceId',''),payer=draft('c.payer',rep()||''),date=draft('c.date',today());
+    if(!amt){toast('金額を入力してください');return}
+    if(split==='practice'&&!pid){toast('参加者で割る場合は対象の練習を選んでください');return}
+    const ref=col('costs').doc();
+    if(await write(()=>ref.set({kind:draft('c.kind','ボール代'),date,amount:amt,split,practiceId:pid,note:T('c.note'),createdBy:rep()||'',createdAt:Date.now()}),'費用を追加しました')){
+      if(payer)await write(()=>col('payments').add({memberId:payer,to:'',practiceId:'',costId:ref.id,settle:false,month:date.slice(0,7),date,amount:amt,note:'立替',createdAt:Date.now()}));
+      closeSheet();
+    }
+  }
+  if(kind==='post'){
+    const title=T('po.title');if(!title){toast('件名を入力してください');return}
+    if(await write(()=>col('posts').add({title,body:T('po.body'),level:draft('po.level','normal'),pinned:!!(S.admin&&draft('po.pinned',false)),practiceId:draft('po.practiceId',c.p||''),authorId:rep()||'',createdAt:Date.now()}),'投稿しました')){const lv=draft('po.level','normal'),body=T('po.body');closeSheet();offerShare(`【テニス部 ${lv==='emergency'?'緊急連絡':lv==='important'?'重要なお知らせ':'連絡'}】\n${title}${body?'\n'+body:''}\n\n${APP_URL}`)}
+  }
+  if(kind==='comment'){
+    const r=f.dataset.r,body=T('cm.'+r);if(!body)return;
+    if(await write(()=>col('comments').add({postId:r,body,authorId:rep()||'',createdAt:Date.now()})))clearDrafts('cm.'+r);
+  }
+  if(kind==='record'){
+    const cand=S.practices.filter(p=>p.date<=today()&&p.status!=='cancelled').sort((a,b)=>b.date.localeCompare(a.date));
+    const pid=draft('rc.p',c.p||(cand.find(p=>!p.record)||cand[0])?._id);const pr=practice(pid);if(!pr)return;const r=pr.record||{};
+    const g=x=>String(draft('rc.'+x,r[x]??'')).trim();
+    const rec={menu:g('menu'),memo:g('memo'),next:g('next'),balls:g('balls'),info:g('info'),photos:recPhotos(r),by:r.by||rep()||'',at:Date.now()};
+    if(await write(()=>col('practices').doc(pid).update({record:rec}),'練習記録を保存しました')){closeSheet();if(S.tab==='record')S.sub.record='menu'}
+  }
+  if(kind==='settings'){
+    const s=S.settings;
+    const data={round:Number(draft('st.round',s.round||10)),leader:String(draft('st.leader',s.leader||'')).trim(),contact:String(draft('st.contact',s.contact||'')).trim(),procedure:String(draft('st.procedure',s.procedure||'')).trim()};
+    if(await write(()=>S.db.doc('settings/app').set({...S.settings,...data}),'保存しました'))clearDrafts('st.');
+  }
+  if(kind==='login-pick'){
+    const m=(S.loginMembers||[]).find(x=>x.id===draft('lp.m',''));if(!m){S.lockErr='お子さんを選んでください。';render();return}
+    S.lockErr='';S.login={step:m.registered?'enter':'set',mid:m.id,name:m.name,invited:m.invited};
+  }
+  if(kind==='login-set'||kind==='login-enter'||kind==='admin-enter'||kind==='admin-set'||kind==='admin-reauth'){
+    if(S.busy)return;
+    const L=S.login;let fn,data;
+    if(kind==='login-set'){
+      const p1=String(draft('ls-1','')),p2=String(draft('ls-2',''));
+      if(p1.length<6){S.lockErr='パスワードは6文字以上にしてください。';render();return}
+      if(p1!==p2){S.lockErr='2回入力したパスワードが違います。';render();return}
+      fn='register';data={memberId:L.mid,code:String(draft('ls-code','')).trim(),password:p1};
+    }else if(kind==='login-enter'){fn='login';data={memberId:L.mid,password:String(draft('le-pw',''))}}
+    else if(kind==='admin-set'){
+      const p1=String(draft('as-1','')),p2=String(draft('as-2',''));
+      if(p1.length<8){S.lockErr='管理者パスワードは8文字以上にしてください。';render();return}
+      if(p1!==p2){S.lockErr='2回入力したパスワードが違います。';render();return}
+      fn='setupAdmin';data={setupKey:String(draft('as-key','')),password:p1};
+    }else{fn='adminLogin';data={password:String(draft(kind==='admin-enter'?'ad-pw':'ar-pw',''))}}
+    S.busy=true;S.lockErr='';render();
+    try{const r=await TENNIS.call(fn,data);['ls-','le-','ad-','as-','ar-'].forEach(clearDrafts);closeSheet();await afterSignIn(r.token)}
+    catch(e){S.lockErr=errMsg(e);if(kind==='admin-reauth')toast(S.lockErr);['ls-1','ls-2','le-pw','ad-pw','ar-pw','as-1','as-2'].forEach(k=>delete S.drafts[k])}
+    S.busy=false;
+  }
+  if(kind==='admin-change'){
+    const p1=String(draft('ac-1','')),p2=String(draft('ac-2',''));
+    if(!S.admin)return;
+    if(p1.length<8){toast('管理者パスワードは8文字以上にしてください');return}
+    if(p1!==p2){toast('2回入力したパスワードが違います');return}
+    try{await TENNIS.call('changeAdminPassword',{password:p1});clearDrafts('ac-');toast('管理者パスワードを変更しました')}catch(e){toast(errMsg(e))}
+  }
+  if(kind==='member-admin'){
+    if(!S.admin)return;
+    const n=T('ma.name');if(!n){toast('選手名を入力してください');return}
+    const ref=col('members').doc();const sib=draft('ma.fam','');
+    if(await write(()=>ref.set({name:n,parent:T('ma.parent'),family:sib||ref.id,createdAt:Date.now()}),n+'さんを登録しました'))clearDrafts('ma.');
+  }
+  S.pendingRender=false;render();
+});
+
+async function uploadPhoto(pid,file){
+  if(!S.assets||!pid)return;
+  try{
+    const blob=await shrink(file);
+    const res=await S.assets.upload(blob,{type:'image/jpeg'});
+    const pr=practice(pid);const r=pr.record||{};
+    await write(()=>col('practices').doc(pid).update({record:{...r,photos:[...recPhotos(r),{id:res.id,url:res.url,by:rep()||''}]}}),'写真を追加しました');
+    S.open['consent:'+pid]=false;
+  }catch(err){
+    const c=err&&err.code;
+    toast(c==='too_large'?'写真が大きすぎます。':c==='unsupported_type'?'この形式の画像は追加できません。':c==='quota_or_state'?'写真の保存容量がいっぱいです。':c==='rate_limited'?'少し時間をおいてからもう一度お試しください。':'写真を追加できませんでした。');
+  }
+}
+function shrink(file){
+  return new Promise((res,rej)=>{
+    const img=new Image();const url=URL.createObjectURL(file);
+    img.onload=()=>{const max=1600;let w=img.naturalWidth,h=img.naturalHeight;const s=Math.min(1,max/Math.max(w,h));w=Math.round(w*s);h=Math.round(h*s);
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);URL.revokeObjectURL(url);
+      cv.toBlob(b=>b?res(b):rej({code:'invalid_request'}),'image/jpeg',0.85)};
+    img.onerror=()=>{URL.revokeObjectURL(url);rej({code:'unsupported_type'})};
+    img.src=url;
+  });
+}
+async function afterSignIn(token){
+  const c=await TENNIS.signIn(token);
+  const wasAdmin=S.admin;
+  S.admin=c.admin;S.session=c.fam||'admin';S.lockErr='';S.login={step:'pick'};
+  S.db=await window.claude.use('db');S.assets=await window.claude.use('assets');
+  if(!S.subscribed)subscribe();
+  if(c.fam){S.family=famOf(c.fam);TENNIS.push.refresh(c.fam)}else S.family=[];
+  if(c.admin&&!wasAdmin){S.tab='admin'}else if(!c.admin){S.tab='home'}
+  S.detail=null;saveSeenIfFirst();
+}
+function saveSeenIfFirst(){if(!S.seenAt)saveSeen()}
+function subscribe(){
+  S.subscribed=true;
+  const map=snap=>snap.docs.map(d=>({...d.data(),_id:d.id}));
+  const keys=['members','practices','responses','rides','payments','costs','posts','comments','reads','likes'];
+  const seen=new Set();
+  const done=()=>{if(seen.size>=keys.length+1){if(S.session&&S.session!=='admin')S.family=famOf(S.session);notifyArrivals();S.loaded=true;scheduleRender()}};
+  const onErr=()=>toast('データの受信が止まりました。ページを開き直してください。');
+  for(const k of keys)col(k).onSnapshot(snap=>{S[k]=map(snap);if(k==='members')S.members.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));seen.add(k);done()},onErr);
+  S.db.doc('settings/app').onSnapshot(s=>{S.settings=s.exists?s.data():{};seen.add('settings');done()},onErr);
+}
+async function setFamily(ids){
+  S.family=ids.filter((x,i)=>ids.indexOf(x)===i);
+  const head=S.family[0];
+  if(head&&S.db)for(const id of S.family){const m=mem(id);if(m&&m.family!==head){try{await col('members').doc(id).update({family:head})}catch(_){}}}
+}
+
+/* ---------- boot ---------- */
+try{S.seenAt=Number(localStorage.getItem('tennis.seenAt')||0)}catch(_){}
+render();
+async function start(){
+  try{const r=await TENNIS.call('loginList');S.loginMembers=r.members;S.adminReady=r.adminReady}
+  catch(_){S.offline=true}
+  S.ready=true;render();
+}
+if(window.TENNIS)start();else window.addEventListener('tennis-ready',start,{once:true});
+})();
+</script>
+</body>
+</html>

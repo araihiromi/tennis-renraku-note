@@ -1,0 +1,109 @@
+rules_version = '2';
+// テニス部連絡ノートのデータの読み書きルール（Firebase のサーバーで確認される）
+// - ログインしていない人は何も読めない・書けない
+// - 家庭としてログインした人は、自分の家庭のお子さんの分だけ書ける
+// - 管理者パスワードでログインした人（admin）は管理の操作ができる
+// - パスワードと登録コード（secrets）は誰も読めない（サーバーの処理だけが使う）
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signed() { return request.auth != null; }
+    function isAdmin() { return signed() && request.auth.token.admin == true; }
+    function fam() { return request.auth.token.fam; }
+    function memberPath(id) { return /databases/$(database)/documents/members/$(id); }
+    // このお子さんは、ログインしている家庭の子か
+    function mine(id) {
+      return signed() && ('fam' in request.auth.token) && id is string && id != ''
+        && exists(memberPath(id)) && get(memberPath(id)).data.family == fam();
+    }
+    function newData() { return request.resource.data; }
+    function oldData() { return resource.data; }
+    function unchanged(keys) { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(keys); }
+
+    match /secrets/{id} { allow read, write: if false; }
+    match /pushLog/{id} { allow read, write: if false; }
+
+    match /settings/{id} {
+      allow read: if signed();
+      allow write: if isAdmin();
+    }
+
+    // 選手（お子さん）：管理者が登録。家庭は兄弟姉妹を自分の家庭に追加できる
+    match /members/{id} {
+      allow read: if signed();
+      allow create: if isAdmin() || (signed() && ('fam' in request.auth.token) && newData().family == fam());
+      allow update, delete: if isAdmin();
+    }
+
+    // 練習予定：ログインした家庭なら作成・編集できる。削除は作った家庭か管理者
+    match /practices/{id} {
+      allow read: if signed();
+      allow create: if isAdmin() || mine(newData().createdBy);
+      allow update: if isAdmin() || (signed() && ('fam' in request.auth.token) && unchanged(['createdBy', 'createdAt']));
+      allow delete: if isAdmin() || mine(oldData().createdBy);
+    }
+
+    // 参加登録：自分の家庭の子だけ。「管理者が追加」(walkIn) は管理者だけが付けられる
+    match /responses/{id} {
+      allow read: if signed();
+      allow create, update: if newData().memberId is string && newData().practiceId is string
+        && id == newData().practiceId + '__' + newData().memberId
+        && (isAdmin() || (mine(newData().memberId) && newData().get('walkIn', false) == false));
+      allow delete: if isAdmin() || mine(oldData().memberId);
+    }
+
+    // 送迎：お願いは乗る子の家庭、引き受け（accepted）は車を出す家庭
+    match /rides/{id} {
+      allow read: if signed();
+      allow create: if isAdmin() || mine(newData().fromId) || (newData().status == 'accepted' && mine(newData().byId));
+      allow update: if isAdmin() || mine(oldData().fromId) || mine(oldData().get('toId', ''))
+        || (newData().status == 'accepted' && mine(newData().byId)) || mine(oldData().get('byId', ''));
+      allow delete: if isAdmin() || mine(oldData().fromId) || mine(oldData().get('byId', ''));
+    }
+
+    // 支払い：払った家庭が記録。月末の精算は受け取る側の家庭も記録できる
+    match /payments/{id} {
+      allow read: if signed();
+      allow create: if isAdmin() || mine(newData().memberId) || (newData().get('settle', false) == true && mine(newData().get('to', '')));
+      allow delete: if isAdmin() || mine(oldData().memberId);
+      allow update: if isAdmin();
+    }
+
+    match /costs/{id} {
+      allow read: if signed();
+      allow create: if isAdmin() || mine(newData().createdBy);
+      allow delete: if isAdmin() || mine(oldData().createdBy);
+      allow update: if isAdmin();
+    }
+
+    match /posts/{id} {
+      allow read: if signed();
+      allow create: if isAdmin() || mine(newData().authorId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || mine(oldData().authorId);
+    }
+
+    match /comments/{id} {
+      allow read: if signed();
+      allow create: if isAdmin() || mine(newData().authorId);
+      allow delete: if isAdmin() || mine(oldData().authorId);
+    }
+
+    // 既読・確認・いいね：自分の家庭の分だけ
+    match /reads/{id} {
+      allow read: if signed();
+      allow write: if mine(request.resource == null ? oldData().memberId : newData().memberId);
+    }
+    match /likes/{id} {
+      allow read: if signed();
+      allow create: if mine(newData().memberId);
+      allow delete: if mine(oldData().memberId);
+    }
+
+    // プッシュ通知の宛先：自分の家庭として登録するだけ（読めない）
+    match /pushTokens/{token} {
+      allow read: if false;
+      allow create, update: if signed() && ('fam' in request.auth.token) && newData().fam == fam();
+      allow delete: if signed();
+    }
+  }
+}

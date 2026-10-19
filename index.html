@@ -71,7 +71,9 @@ h3{font-size:14px;margin:0;font-weight:700}
 .pill.amber{background:var(--amber-soft);color:var(--amber)} .pill.grey{background:var(--soft);color:var(--muted)}
 .pill.solid-red{background:var(--red);color:#fff}
 .btn{border:1px solid var(--rule);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:700;line-height:1.3;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+a.btn{text-decoration:none}
 .btn:hover{border-color:var(--muted)}
+body.sheet-open #toast{bottom:auto;top:calc(var(--top-h) + 12px + env(safe-area-inset-top,0px))}
 .btn.primary{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .btn.outline{border-color:var(--green);color:var(--green)}
 .btn.block{width:100%;padding:12px}
@@ -271,7 +273,7 @@ const S={
   db:null,user:null,uid:null,admin:false,assets:null,ready:false,offline:false,
   members:[],practices:[],responses:[],rides:[],payments:[],costs:[],posts:[],comments:[],reads:[],likes:[],settings:{},
   family:[],month:ym(new Date()),tab:'home',detail:null,dtab:'summary',attFilter:'all',planMode:'list',
-  sub:{ride:'drivers',money:'month',talk:'all',record:'menu'},ridePid:null,
+  sub:{ride:'drivers',money:'month',talk:'all',record:'menu'},ridePid:null,seenAt:0,bellSince:0,knownEv:null,
   sheet:null,ctx:{},drawer:false,bell:false,open:{},drafts:{},confirm:null,pendingRender:false,photoFor:null
 };
 const WD=['日','月','火','水','木','金','土'];
@@ -447,6 +449,52 @@ function scheduleRender(){
 document.addEventListener('focusout',()=>{setTimeout(()=>{if(S.pendingRender){S.pendingRender=false;scheduleRender()}},0)});
 
 const TITLES={home:'テニス部連絡ノート',plan:'練習予定',ride:'送迎調整',money:'費用管理',talk:'連絡掲示板',record:'練習記録',me:'マイページ',safety:'緊急連絡・安全',admin:'管理者画面'};
+/* ---------- 新着のお知らせ・LINEで知らせる ---------- */
+const APP_URL='https://claude.ai/artifact/AuJ2uYDZpuM5gSdSQFvzCy';
+// new or updated practices, rides and messages by other families, newest first
+function events(){
+  const ev=[];
+  for(const p of S.practices){
+    if(p.createdAt&&!mineFam(p.createdBy))ev.push({k:'p:'+p._id,at:p.createdAt,icon:'plan',text:`練習予定が登録されました：${mdw(p.date)} ${p.place}`,act:'openDetail',p:p._id});
+    (p.history||[]).forEach((h,i)=>{if(!mineFam(h.by))ev.push({k:'ph:'+p._id+':'+i,at:h.at,icon:h.text.startsWith('中止')?'alert':'plan',text:`${mdw(p.date)}の練習予定が${h.text.startsWith('中止：')?'中止になりました':'変更されました'}（${h.text}）`,act:'openDetail',p:p._id})});
+  }
+  for(const r of S.rides){
+    const pr=practice(r.practiceId);if(!pr)continue;
+    if(r.createdAt&&r.status!=='accepted'&&!mineFam(r.fromId))ev.push({k:'r:'+r._id,at:r.createdAt,icon:'car',text:`送迎のお願い：${md(pr.date)} ${name(r.fromId)}さん${r.toId?'（'+famLabel(r.toId)+'へ）':''}`,act:'goRide',p:pr._id});
+    if(r.status==='accepted'&&!mineFam(r.byId))ev.push({k:'ra:'+r._id,at:r.updatedAt||r.createdAt,icon:'car',text:`送迎が決まりました：${md(pr.date)} ${name(r.fromId)}さん → ${famLabel(r.byId)}の車`,act:'goRide',p:pr._id});
+  }
+  for(const x of S.posts)if(!mineFam(x.authorId))ev.push({k:'po:'+x._id,at:x.createdAt,icon:'talk',text:`${x.level==='emergency'?'【緊急】':x.level==='important'?'【重要】':''}連絡：${x.title}`,act:'goTalk',k2:x.level!=='normal'?'important':x.practiceId?'practice':'all'});
+  for(const c of S.comments){const x=S.posts.find(y=>y._id===c.postId);if(x&&!mineFam(c.authorId))ev.push({k:'cm:'+c._id,at:c.createdAt,icon:'talk',text:`返信：「${x.title}」に${famLabel(c.authorId)}から`,act:'goTalk',k2:'all'})}
+  return ev.filter(e=>e.at).sort((a,b)=>b.at-a.at);
+}
+function newEvents(){return events().filter(e=>e.at>S.seenAt)}
+function saveSeen(){S.seenAt=Date.now();try{localStorage.setItem('tennis.seenAt',String(S.seenAt))}catch(_){}}
+function eventList(list,since){
+  if(!list.length)return '<p class="note">新しいお知らせはありません。</p>';
+  return `<div class="todo">${list.map(e=>`<button data-act="${e.act}" data-p="${e.p||''}" data-k="${e.k2||''}"><span class="dot" style="border-color:var(--green);color:var(--green)">${ic(e.icon)}</span><span class="grow">${e.at>since?'<span class="pill orange" style="margin-right:4px">新着</span>':''}${esc(e.text)}<br><span class="small muted">${stamp(e.at)}</span></span>${ic('chev')}</button>`).join('')}</div>`;
+}
+// message texts for the LINE group
+function practiceText(p,kind,detail){
+  const L=[`【テニス部 練習予定${kind}】`,`${jdate(p.date)}（${wd(p.date)}）${p.start||''}${p.end?'〜'+p.end:''}`,`${p.place} ${p.court}番コート`];
+  if(p.meetTime||p.meetPlace)L.push('集合 '+[p.meetTime,p.meetPlace].filter(Boolean).join(' '));
+  if(p.bring)L.push('持ち物：'+p.bring);
+  if(p.fee)L.push('テニスコート代金：'+yen(p.fee)+'（参加者で割り勘）');
+  if(p.deadline)L.push('締切：'+dl(p.deadline));
+  if(detail)L.push('変更点：'+detail);
+  L.push('','参加・送迎の登録はアプリから',APP_URL);
+  return L.join('\n');
+}
+function offerShare(text,title){openSheet('share',{text,title:title||'LINEで知らせる'})}
+
+// while the app is open: pop a toast for anything new from other families
+function notifyArrivals(){
+  const ev=events();const keys=new Set(ev.map(e=>e.k));
+  if(!S.seenAt){saveSeen();S.knownEv=keys;return}
+  if(S.knownEv){const fresh=ev.filter(e=>!S.knownEv.has(e.k));if(fresh.length&&!locked())toast((fresh.length>1?`新着${fresh.length}件：`:'新着：')+fresh[0].text)}
+  S.knownEv=keys;
+  const n=newEvents().length;document.title=(n?`(${n}) `:'')+'テニス部連絡ノート';
+}
+
 /* ---------- login password ---------- */
 // One shared password set by an admin. Admins (Editor and up) skip the lock screen.
 async function sha(text){
@@ -489,10 +537,10 @@ function renderLock(){
 function render(){
   if(S.ready&&locked()){renderLock();return}
   document.body.classList.toggle('wide',S.tab==='admin'&&!S.detail);
-  const todo=S.ready?todoItems():[];
+  const todo=S.ready?todoItems():[];const fresh=S.ready?newEvents():[];
   const top=document.getElementById('top');
   top.innerHTML=S.detail?`<button class="iconbtn" data-act="back" aria-label="戻る">${ic('back')}</button><h1>予定の詳細</h1><span></span>`
-    :`<button class="iconbtn" data-act="drawer" aria-label="メニューを開く">${ic('menu')}</button><h1>${TITLES[S.tab]||TITLES.home}</h1><button class="iconbtn" data-act="bell" aria-label="お知らせ">${ic('bell')}${todo.length?`<span class="badge">${todo.length}</span>`:''}</button>`;
+    :`<button class="iconbtn" data-act="drawer" aria-label="メニューを開く">${ic('menu')}</button><h1>${TITLES[S.tab]||TITLES.home}</h1><button class="iconbtn" data-act="bell" aria-label="お知らせ">${ic('bell')}${todo.length+fresh.length?`<span class="badge">${todo.length+fresh.length}</span>`:''}</button>`;
   const nav=[['home','ホーム'],['plan','予定'],['talk','連絡'],['money','費用'],['record','記録']];
   const unread=S.ready&&S.family.length?S.posts.filter(p=>!readDoc(p._id)).length:0;
   const bdg={talk:unread};
@@ -507,6 +555,7 @@ function render(){
 }
 function renderOverlay(todo){
   const o=document.getElementById('overlay');let h='';
+  document.body.classList.toggle('sheet-open',!!S.sheet);
   if(S.drawer){
     const items=[['home','home','ホーム'],['plan','plan','練習予定'],['goRide','car','送迎調整'],['talk','talk','連絡掲示板'],['money','money','費用管理'],['record','record','練習記録'],['safety','shield','緊急連絡・安全'],['me','person','マイページ・家族']];
     if(S.admin)items.push(['admin','dash','管理者画面']);
@@ -514,7 +563,7 @@ function renderOverlay(todo){
       ${S.settings.pwHash&&!S.admin?`<button class="navitem" data-act="logout">${ic('back')}ログアウト</button>`:''}
       <p class="note" style="padding:14px 12px 0">${S.family.length?esc(S.family.map(name).join('・'))+' の保護者として利用中':'マイページでお子さんを選んでください'}</p></nav></div>`;
   }
-  if(S.bell)h+=`<div class="drawer" data-act="closeOverlay" style="background:transparent"></div><div class="card bellpanel" role="dialog" aria-label="お知らせ"><div class="sec-t red">${ic('alert')}未対応の項目</div>${todoList(todo)}</div>`;
+  if(S.bell)h+=`<div class="drawer" data-act="closeOverlay" style="background:transparent"></div><div class="card bellpanel" role="dialog" aria-label="お知らせ"><div class="sec-t" style="color:var(--green)">${ic('bell')}新着のお知らせ</div>${eventList(events().slice(0,15),S.bellSince)}<div class="sec-t red">${ic('alert')}未対応の項目</div>${todoList(todo)}</div>`;
   if(S.sheet)h+=`<div class="sheet" data-act="closeOverlay"><div class="in" data-stop="1" role="dialog">${sheetBody()}</div></div>`;
   o.innerHTML=h;
 }
@@ -974,6 +1023,13 @@ function sheetBody(){
       <p class="note wide">お子さんは「参加」で登録されます。住所や電話番号は書かず、待ち合わせ場所だけを書いてください。</p>
       <div class="actions wide">${r.transport===(k==='driver'?'can':'cannot')?`<button type="button" class="btn danger" data-act="unregister" data-p="${p._id}" data-m="${m0}">登録を取り消す</button>`:''}${close}<button class="btn primary">登録する</button></div></form>`;
   }
+  if(k==='share'){
+    return `<h2>${esc(c.title)}</h2>
+      <p class="note">このアプリはスマートフォンにプッシュ通知を送れません。保護者のLINEグループに送ると、みんなのスマートフォンに通知が届きます。</p>
+      <div class="field"><label for="sh-text">送る文章（直してから送れます）</label><textarea id="sh-text" data-draft="sh.text" style="min-height:180px">${esc(draft('sh.text',c.text))}</textarea></div>
+      <div class="actions"><button type="button" class="btn" data-act="closeSheet">送らない</button><button type="button" class="btn" data-act="copyShare">文章をコピー</button><a class="btn primary" id="sh-link" href="https://line.me/R/share?text=${encodeURIComponent(draft('sh.text',c.text))}" target="_blank" rel="noopener">LINEで送る</a></div>
+      <p class="note">「LINEで送る」でLINEが開いたら、送り先に保護者のグループを選んでください。開かないときは「文章をコピー」してLINEに貼り付けてください。</p>`;
+  }
   if(k==='walkin'){
     const p=practice(c.p);const off=S.members.filter(m=>resp(p._id,m._id)?.attend!=='yes');
     return `<form data-form="walkin" class="fgrid"><h2 class="wide">参加した子を追加（${mdw(p.date)}）</h2>
@@ -1076,7 +1132,7 @@ document.addEventListener('click',async e=>{
   switch(a){
     case 'tab':go(k);if(k==='talk')markRead();break;
     case 'drawer':S.drawer=true;S.bell=false;break;
-    case 'bell':S.bell=!S.bell;S.drawer=false;break;
+    case 'bell':S.bell=!S.bell;S.drawer=false;if(S.bell){S.bellSince=S.seenAt;saveSeen()}break;
     case 'closeOverlay':S.drawer=false;S.bell=false;if(S.sheet)closeSheet();break;
     case 'closeSheet':closeSheet();break;
     case 'back':S.detail=null;window.scrollTo({top:0});break;
@@ -1105,21 +1161,22 @@ document.addEventListener('click',async e=>{
         for(const x of S.responses.filter(x=>x.practiceId===p))await write(()=>col('responses').doc(x._id).delete());
         for(const x of S.rides.filter(x=>x.practiceId===p))await write(()=>col('rides').doc(x._id).delete());
       }break;
-    case 'uncancel':{const pr=practice(p);await write(()=>col('practices').doc(p).update({status:'scheduled',cancelReason:'',history:[...(pr.history||[]),{at:Date.now(),text:'中止を取り消し、予定どおり実施'}]}),'中止を取り消しました');break}
+    case 'uncancel':{const pr=practice(p);await write(()=>col('practices').doc(p).update({status:'scheduled',cancelReason:'',history:[...(pr.history||[]),{at:Date.now(),text:'中止を取り消し、予定どおり実施',by:rep()||''}]}),'中止を取り消しました');offerShare(practiceText(pr,'（中止を取り消し、予定どおり実施）'));break}
     case 'attend':await setResp(p,m,k?{attend:'yes',walkIn:false}:{attend:null,transport:null});break;
     case 'adminAttend':if(!S.admin)break;await setResp(p,m,k?{attend:'yes',walkIn:true,addedAt:Date.now()}:{attend:null,transport:null,walkIn:false});break;
     case 'unregister':if(await setResp(p,m,{transport:null}))closeSheet();break;
-    case 'take':{
+    case 'take':{const rideShare=()=>{const pr=practice(p);offerShare(`【テニス部 送迎決定】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.place}\n${name(m)}さんは${famLabel(rep())}の車に乗ります。\n待ち合わせ：${resp(p,m)?.pickup||'あとで連絡します'}\n\n${APP_URL}`,'送迎の決定をLINEで知らせる')};
       const C=rideCtx(practice(p));const myD=C.drivers.find(d=>isMine(d.memberId));if(!myD)break;
       const req=C.rides.find(x=>x.fromId===m&&x.status!=='accepted');const pick=resp(p,m)?.pickup||'';
-      if(req)await write(()=>col('rides').doc(req._id).update({status:'accepted',byId:myD.memberId,meetPoint:pick,updatedAt:Date.now()}),'送迎が決まりました');
-      else await write(()=>col('rides').add({practiceId:p,fromId:m,toId:myD.memberId,message:'',status:'accepted',byId:myD.memberId,meetPoint:pick,createdAt:Date.now()}),'送迎が決まりました');
+      if(req)await write(()=>col('rides').doc(req._id).update({status:'accepted',byId:myD.memberId,meetPoint:pick,updatedAt:Date.now()}),'送迎が決まりました')&&rideShare();
+      else await write(()=>col('rides').add({practiceId:p,fromId:m,toId:myD.memberId,message:'',status:'accepted',byId:myD.memberId,meetPoint:pick,createdAt:Date.now()}),'送迎が決まりました')&&rideShare();
       break}
-    case 'rideAccept':{const x=S.rides.find(y=>y._id===r);const myD=S.responses.find(y=>y.practiceId===x.practiceId&&isMine(y.memberId)&&y.transport==='can');await write(()=>col('rides').doc(r).update({status:'accepted',byId:myD?.memberId||rep(),meetPoint:resp(x.practiceId,x.fromId)?.pickup||'',updatedAt:Date.now()}),'送迎を引き受けました');break}
+    case 'rideAccept':{const x=S.rides.find(y=>y._id===r);const myD=S.responses.find(y=>y.practiceId===x.practiceId&&isMine(y.memberId)&&y.transport==='can');if(await write(()=>col('rides').doc(r).update({status:'accepted',byId:myD?.memberId||rep(),meetPoint:resp(x.practiceId,x.fromId)?.pickup||'',updatedAt:Date.now()}),'送迎を引き受けました')){const pr=practice(x.practiceId);offerShare(`【テニス部 送迎決定】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.place}\n${name(x.fromId)}さんは${famLabel(rep())}の車に乗ります。\n待ち合わせ：${resp(x.practiceId,x.fromId)?.pickup||'あとで連絡します'}\n\n${APP_URL}`,'送迎の決定をLINEで知らせる')}break}
     case 'rideDecline':await write(()=>col('rides').doc(r).update({status:'declined',updatedAt:Date.now()}));break;
     case 'rideUndo':await write(()=>col('rides').doc(r).delete(),'送迎の決定を取り消しました');break;
     case 'rideDel':await write(()=>col('rides').doc(r).delete(),'依頼を取り消しました');break;
     case 'pwClear':{S.confirm=null;if(!S.admin)break;const rest={...S.settings};delete rest.pwHash;delete rest.pwSalt;delete rest.pwSetAt;await write(()=>S.db.doc('settings/app').set(rest),'パスワードをなくしました');break}
+    case 'copyShare':{const t=String(draft('sh.text',S.ctx.text||''));try{await navigator.clipboard.writeText(t);toast('コピーしました。LINEに貼り付けてください')}catch(_){const el=document.getElementById('sh-text');if(el){el.focus();el.select()}toast('文章を選択しました。長押しでコピーしてください')}return}
     case 'logout':S.unlocked='';try{localStorage.removeItem('tennis.unlock')}catch(_){}S.drawer=false;break;
     case 'settle':{
       S.confirm=null;
@@ -1156,7 +1213,7 @@ document.addEventListener('change',async e=>{
   if(t.dataset.actChange==='bring'){const key='tennis.bring.'+t.dataset.p;let c={};try{c=JSON.parse(localStorage.getItem(key)||'{}')}catch(_){}c[t.value]=t.checked;try{localStorage.setItem(key,JSON.stringify(c))}catch(_){}render();return}
   if(t.id==='photo-input'&&t.files&&t.files[0]){const f=t.files[0];t.value='';await uploadPhoto(S.photoFor,f);render()}
 });
-document.addEventListener('input',e=>{const k=e.target.dataset.draft;if(k)S.drafts[k]=e.target.value});
+document.addEventListener('input',e=>{const k=e.target.dataset.draft;if(k)S.drafts[k]=e.target.value;if(k==='sh.text'){const a=document.getElementById('sh-link');if(a)a.href='https://line.me/R/share?text='+encodeURIComponent(e.target.value)}});
 document.addEventListener('submit',async e=>{
   e.preventDefault();
   const f=e.target,kind=f.dataset.form,c=S.ctx;
@@ -1174,18 +1231,19 @@ document.addEventListener('submit',async e=>{
     if(S.sheet==='practice'){
       const P=practice(c.p);
       const changes=Object.keys(FIELDS).filter(x=>String(P[x]??'')!==String(data[x]??'')).map(x=>`${FIELDS[x]}：${P[x]||'なし'} → ${data[x]||'なし'}`);
-      const hist=[...(P.history||[])];if(changes.length)hist.push({at:Date.now(),text:changes.join('、')});
-      if(await write(()=>col('practices').doc(c.p).update({...data,history:hist}),'練習予定を更新しました'))closeSheet();
+      const hist=[...(P.history||[])];if(changes.length)hist.push({at:Date.now(),text:changes.join('、'),by:rep()||''});
+      if(await write(()=>col('practices').doc(c.p).update({...data,history:hist}),'練習予定を更新しました')){closeSheet();if(changes.length)offerShare(practiceText({...P,...data},'の変更',changes.join('、')))}
     }else{
       Object.assign(data,{status:'scheduled',history:[],createdBy:rep()||'',createdAt:Date.now()});
-      if(await write(()=>col('practices').add(data),'練習予定を作成しました')){closeSheet();S.month=data.date.slice(0,7)}
+      if(await write(()=>col('practices').add(data),'練習予定を作成しました')){closeSheet();S.month=data.date.slice(0,7);offerShare(practiceText(data,''))}
     }
   }
   if(kind==='cancel'){
     const p=f.dataset.p,pr=practice(p),reason=T('cr.'+p)||'中止します';
-    if(await write(()=>col('practices').doc(p).update({status:'cancelled',cancelReason:reason,history:[...(pr.history||[]),{at:Date.now(),text:'中止：'+reason}]}),'中止にしました')){
+    if(await write(()=>col('practices').doc(p).update({status:'cancelled',cancelReason:reason,history:[...(pr.history||[]),{at:Date.now(),text:'中止：'+reason,by:rep()||''}]}),'中止にしました')){
       if(draft('cn.'+p,true))await write(()=>col('posts').add({title:`${mdw(pr.date)} ${pr.place} の練習は中止です`,body:reason,level:'emergency',pinned:false,practiceId:p,authorId:rep()||'',createdAt:Date.now()}));
       S.open['cancel:'+p]=false;clearDrafts('cr.'+p);
+      offerShare(`【テニス部 練習中止】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.start||''} ${pr.place}の練習は中止です。\n理由：${reason}\n\n${APP_URL}`,'中止をLINEで知らせる');
     }
   }
   if(kind==='driver'||kind==='rider'){
@@ -1202,7 +1260,7 @@ document.addEventListener('submit',async e=>{
     if(ok){toast(ids.length+'人を参加者に追加しました');clearDrafts('wi.');closeSheet()}
   }
   if(kind==='ask'){
-    if(await write(()=>col('rides').add({practiceId:c.p,fromId:c.m,toId:T('as.to'),message:T('as.msg'),status:'open',byId:null,meetPoint:'',createdAt:Date.now()}),'送迎のお願いを送りました'))closeSheet();
+    if(await write(()=>col('rides').add({practiceId:c.p,fromId:c.m,toId:T('as.to'),message:T('as.msg'),status:'open',byId:null,meetPoint:'',createdAt:Date.now()}),'送迎のお願いを送りました')){closeSheet();const pr=practice(c.p);const to=T('as.to');offerShare(`【テニス部 送迎のお願い】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.place}\n${name(c.m)}さんの送迎を${to?famLabel(to)+'に':'車を出せる方に'}お願いしたいです。${T('as.msg')?'\n'+T('as.msg'):''}\n乗る場所：${resp(c.p,c.m)?.pickup||'未記入'}\n\n引き受けられる方はアプリから\n${APP_URL}`,'送迎のお願いをLINEで知らせる')}
   }
   if(kind==='pay'){
     const pr=c.p?practice(c.p):null,cst=c.m?S.costs.find(x=>x._id===c.m):null;
@@ -1227,7 +1285,7 @@ document.addEventListener('submit',async e=>{
   }
   if(kind==='post'){
     const title=T('po.title');if(!title){toast('件名を入力してください');return}
-    if(await write(()=>col('posts').add({title,body:T('po.body'),level:draft('po.level','normal'),pinned:!!(S.admin&&draft('po.pinned',false)),practiceId:draft('po.practiceId',c.p||''),authorId:rep()||'',createdAt:Date.now()}),'投稿しました'))closeSheet();
+    if(await write(()=>col('posts').add({title,body:T('po.body'),level:draft('po.level','normal'),pinned:!!(S.admin&&draft('po.pinned',false)),practiceId:draft('po.practiceId',c.p||''),authorId:rep()||'',createdAt:Date.now()}),'投稿しました')){const lv=draft('po.level','normal'),body=T('po.body');closeSheet();offerShare(`【テニス部 ${lv==='emergency'?'緊急連絡':lv==='important'?'重要なお知らせ':'連絡'}】\n${title}${body?'\n'+body:''}\n\n${APP_URL}`)}
   }
   if(kind==='comment'){
     const r=f.dataset.r,body=T('cm.'+r);if(!body)return;
@@ -1294,6 +1352,7 @@ async function setFamily(ids){
 }
 
 /* ---------- boot ---------- */
+try{S.seenAt=Number(localStorage.getItem('tennis.seenAt')||0)}catch(_){}
 try{const t=localStorage.getItem('tennis.tab');if(t&&TITLES[t])S.tab=t;const f=JSON.parse(localStorage.getItem('tennis.family')||'[]');if(Array.isArray(f))S.family=f}catch(_){}
 render();
 (async()=>{
@@ -1307,7 +1366,7 @@ render();
   const map=snap=>snap.docs.map(d=>({...d.data(),_id:d.id}));
   const keys=['members','practices','responses','rides','payments','costs','posts','comments','reads','likes'];
   const seen=new Set();let first=true;
-  const done=()=>{if(seen.size>=keys.length+1){if(first){first=false;S.family=S.family.filter(id=>mem(id))}S.ready=true;scheduleRender()}};
+  const done=()=>{if(seen.size>=keys.length+1){notifyArrivals();if(first){first=false;S.family=S.family.filter(id=>mem(id))}S.ready=true;scheduleRender()}};
   const onErr=err=>{if(err.code!=='revoked')toast('データの受信が止まりました。ページを開き直してください。')};
   for(const k of keys)col(k).onSnapshot(snap=>{S[k]=map(snap);if(k==='members')S.members.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));seen.add(k);done()},onErr);
   db.doc('settings/app').onSnapshot(s=>{S.settings=s.exists?s.data():{};seen.add('settings');done()},onErr);

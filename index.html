@@ -464,6 +464,7 @@ function events(){
     if(r.status==='accepted'&&!mineFam(r.byId))ev.push({k:'ra:'+r._id,at:r.updatedAt||r.createdAt,icon:'car',text:`送迎が決まりました：${md(pr.date)} ${name(r.fromId)}さん → ${famLabel(r.byId)}の車`,act:'goRide',p:pr._id});
   }
   for(const x of S.posts)if(!mineFam(x.authorId))ev.push({k:'po:'+x._id,at:x.createdAt,icon:'talk',text:`${x.level==='emergency'?'【緊急】':x.level==='important'?'【重要】':''}連絡：${x.title}`,act:'goTalk',k2:x.level!=='normal'?'important':x.practiceId?'practice':'all'});
+  for(const r of S.responses)if(r.walkIn&&r.attend==='yes'&&r.addedAt&&isMine(r.memberId)){const pr=practice(r.practiceId);if(pr)ev.push({k:'wi:'+r._id+':'+r.addedAt,at:r.addedAt,icon:'check',text:`${name(r.memberId)}さんが${mdw(pr.date)}の練習に参加したと管理者が記録しました（テニスコート代金の割り勘に入ります）`,act:'openDetail',p:pr._id,k2:'attend'})}
   for(const c of S.comments){const x=S.posts.find(y=>y._id===c.postId);if(x&&!mineFam(c.authorId))ev.push({k:'cm:'+c._id,at:c.createdAt,icon:'talk',text:`返信：「${x.title}」に${famLabel(c.authorId)}から`,act:'goTalk',k2:'all'})}
   return ev.filter(e=>e.at).sort((a,b)=>b.at-a.at);
 }
@@ -484,7 +485,12 @@ function practiceText(p,kind,detail){
   L.push('','参加・送迎の登録はアプリから',APP_URL);
   return L.join('\n');
 }
-function offerShare(text,title){openSheet('share',{text,title:title||'LINEで知らせる'})}
+function offerShare(text,title,personal){openSheet('share',{text,title:title||'LINEで知らせる',personal})}
+function walkInShare(pid,ids){
+  const p=practice(pid);const n=attendees(pid).length;const one=p.fee&&n?roundUp(p.fee/n):0;
+  return `【テニス部 参加のお知らせ】\n${jdate(p.date)}（${wd(p.date)}）${p.start||''} ${p.place}の練習に、${ids.map(name).join('・')}さんが参加しました（保護者の登録がなかったため、管理者が記録しました）。`+(one?`\nテニスコート代金は参加者${n}名で割り勘になり、1人 ${yen(one)}が今月の精算に入ります（参加者が増減すると変わります）。`:'')+`\n\nアプリで確認できます\n${APP_URL}`;
+}
+function offerWalkIn(pid,ids){offerShare(walkInShare(pid,ids),'対象の保護者に知らせる',true)}
 
 // while the app is open: pop a toast for anything new from other families
 function notifyArrivals(){
@@ -656,6 +662,8 @@ function viewHome(){
   if(n)h+=`<section class="notice${n.level==='emergency'?' red':''}"><div class="t">${ic(n.level==='emergency'?'alert':'house')}${n.level==='emergency'?'緊急のお知らせ':'重要なお知らせ'}</div>
     <div class="row" style="align-items:flex-start;flex-wrap:nowrap;gap:10px"><span style="color:var(--blue)">${ic('umbrella')}</span><div class="grow"><strong style="font-size:14px">${esc(n.title)}</strong>${n.body?`<p>${esc(n.body)}</p>`:''}</div></div>
     <div class="row">${S.family.length&&!confirmed(n._id)?`<button class="btn sm primary" data-act="confirmRead" data-r="${n._id}">確認しました</button>`:S.family.length?'<span class="pill">確認済み</span>':''}<button class="link" data-act="goTalk" data-k="important">詳細を見る</button></div></section>`;
+  const wi=S.responses.filter(r=>r.walkIn&&r.attend==='yes'&&isMine(r.memberId)&&inMonth(practice(r.practiceId)?.date||'',ym(new Date()))).map(r=>({r,p:practice(r.practiceId)})).sort((a,b)=>b.p.date.localeCompare(a.p.date));
+  if(wi.length)h+=`<section class="notice"><div class="t">${ic('check')}管理者が記録した参加（${mnum(ym(new Date()))}）</div>${wi.map(({r,p})=>{const n=attendees(p._id).length;return `<p>${mdw(p.date)} ${esc(p.place)}：<strong>${esc(name(r.memberId))}</strong>さん${p.fee&&n?`　テニスコート代金 1人 ${yen(roundUp(p.fee/n))}（${n}名で割り勘）`:''}</p>`}).join('')}<p class="note">保護者の登録なしで参加したため、管理者が記録しました。今月のテニスコート代金の精算に自動で入っています。違う場合は管理担当の方に連絡してください。</p></section>`;
   const todo=todoItems();
   h+=`<section class="card"><div class="sec-t orange">${ic('alert')}未対応の項目</div>${todoList(todo)}</section>`;
   return h;
@@ -1082,17 +1090,17 @@ function sheetBody(){
   }
   if(k==='share'){
     return `<h2>${esc(c.title)}</h2>
-      <p class="note">このアプリはスマートフォンにプッシュ通知を送れません。保護者のLINEグループに送ると、みんなのスマートフォンに通知が届きます。</p>
+      <p class="note">${c.personal?'アプリを開いたときにも、対象の保護者のお知らせに表示されます。スマートフォンに知らせたいときは、<strong>その保護者に個別に</strong>LINEで送ってください（グループには送らないでください）。':'このアプリはスマートフォンにプッシュ通知を送れません。保護者のLINEグループに送ると、みんなのスマートフォンに通知が届きます。'}</p>
       <div class="field"><label for="sh-text">送る文章（直してから送れます）</label><textarea id="sh-text" data-draft="sh.text" style="min-height:180px">${esc(draft('sh.text',c.text))}</textarea></div>
       <div class="actions"><button type="button" class="btn" data-act="closeSheet">送らない</button><button type="button" class="btn" data-act="copyShare">文章をコピー</button><a class="btn primary" id="sh-link" href="https://line.me/R/share?text=${encodeURIComponent(draft('sh.text',c.text))}" target="_blank" rel="noopener">LINEで送る</a></div>
-      <p class="note">「LINEで送る」でLINEが開いたら、送り先に保護者のグループを選んでください。開かないときは「文章をコピー」してLINEに貼り付けてください。</p>`;
+      <p class="note">「LINEで送る」でLINEが開いたら、送り先に${c.personal?'その保護者':'保護者のグループ'}を選んでください。開かないときは「文章をコピー」してLINEに貼り付けてください。</p>`;
   }
   if(k==='walkin'){
     const p=practice(c.p);const off=S.members.filter(m=>resp(p._id,m._id)?.attend!=='yes');
     return `<form data-form="walkin" class="fgrid"><h2 class="wide">参加した子を追加（${mdw(p.date)}）</h2>
-      <p class="note wide">保護者の登録なしで来た子にチェックしてください。追加した子は「管理者が追加」と表示され、参加日数とテニスコート代金の割り勘に入ります。</p>
+      <p class="note wide">保護者の登録なしで来た子にチェックしてください。追加した子は「管理者が追加」と表示され、参加日数・テニスコート代金の割り勘・その家庭の1か月のテニスコート代金に自動で入ります。</p>
       ${off.length?`<div class="plist wide">${off.map(m=>`<label class="prow check" style="align-items:center"><input type="checkbox" data-draft-check="wi.${m._id}" ${draft('wi.'+m._id,false)?'checked':''}> ${av(m._id)}<span class="grow"><strong>${esc(m.name)}</strong> <span class="small muted">${m.parent?esc(m.parent)+'さん':''}</span></span></label>`).join('')}</div>`:'<p class="note wide">登録済みの選手は全員参加になっています。</p>'}
-      <div class="field wide"><label for="wi-new">名簿にいない子（新しく登録して追加）</label><input id="wi-new" data-draft="wi.new" value="${esc(draft('wi.new',''))}" placeholder="例：佐藤 花子"></div>
+      <p class="note wide">選べるのはアプリに登録されている子だけです。名簿にいない子は、先に「メンバー管理」で登録してください。追加すると、その子の保護者のアプリにお知らせが出ます。</p>
       <div class="actions wide">${close}<button class="btn primary">参加者に追加</button></div></form>`;
   }
   if(k==='ask'){
@@ -1220,7 +1228,7 @@ document.addEventListener('click',async e=>{
       }break;
     case 'uncancel':{const pr=practice(p);await write(()=>col('practices').doc(p).update({status:'scheduled',cancelReason:'',history:[...(pr.history||[]),{at:Date.now(),text:'中止を取り消し、予定どおり実施',by:rep()||''}]}),'中止を取り消しました');offerShare(practiceText(pr,'（中止を取り消し、予定どおり実施）'));break}
     case 'attend':await setResp(p,m,k?{attend:'yes',walkIn:false}:{attend:null,transport:null});break;
-    case 'adminAttend':if(!S.admin)break;await setResp(p,m,k?{attend:'yes',walkIn:true,addedAt:Date.now()}:{attend:null,transport:null,walkIn:false});break;
+    case 'adminAttend':if(!S.admin)break;if(await setResp(p,m,k?{attend:'yes',walkIn:true,addedAt:Date.now()}:{attend:null,transport:null,walkIn:false})&&k)offerWalkIn(p,[m]);break;
     case 'unregister':if(await setResp(p,m,{transport:null}))closeSheet();break;
     case 'take':{const rideShare=()=>{const pr=practice(p);offerShare(`【テニス部 送迎決定】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.place}\n${name(m)}さんは${famLabel(rep())}の車に乗ります。\n待ち合わせ：${resp(p,m)?.pickup||'あとで連絡します'}\n\n${APP_URL}`,'送迎の決定をLINEで知らせる')};
       const C=rideCtx(practice(p));const myD=C.drivers.find(d=>isMine(d.memberId));if(!myD)break;
@@ -1312,12 +1320,11 @@ document.addEventListener('submit',async e=>{
     if(await setResp(c.p,m,patch)){toast('登録しました');closeSheet()}
   }
   if(kind==='walkin'){
-    const ids=S.members.filter(m=>draft('wi.'+m._id,false)).map(m=>m._id);
-    const nn=T('wi.new');
-    if(!ids.length&&!nn){toast('追加する子を選ぶか、名前を入力してください');return}
-    if(nn){const ref=col('members').doc();if(await write(()=>ref.set({name:nn,parent:'',createdAt:Date.now()})))ids.push(ref.id)}
+    if(!S.admin)return;
+    const ids=S.members.filter(m=>draft('wi.'+m._id,false)&&resp(c.p,m._id)?.attend!=='yes').map(m=>m._id);
+    if(!ids.length){toast('追加する子を選んでください');return}
     let ok=true;for(const id of ids)ok=(await setResp(c.p,id,{attend:'yes',walkIn:true,addedAt:Date.now()}))&&ok;
-    if(ok){toast(ids.length+'人を参加者に追加しました');clearDrafts('wi.');closeSheet()}
+    if(ok){toast(ids.length+'人を参加者に追加しました');clearDrafts('wi.');closeSheet();offerWalkIn(c.p,ids)}
   }
   if(kind==='ask'){
     if(await write(()=>col('rides').add({practiceId:c.p,fromId:c.m,toId:T('as.to'),message:T('as.msg'),status:'open',byId:null,meetPoint:'',createdAt:Date.now()}),'送迎のお願いを送りました')){closeSheet();const pr=practice(c.p);const to=T('as.to');offerShare(`【テニス部 送迎のお願い】\n${jdate(pr.date)}（${wd(pr.date)}）${pr.place}\n${name(c.m)}さんの送迎を${to?famLabel(to)+'に':'車を出せる方に'}お願いしたいです。${T('as.msg')?'\n'+T('as.msg'):''}\n乗る場所：${resp(c.p,c.m)?.pickup||'未記入'}\n\n引き受けられる方はアプリから\n${APP_URL}`,'送迎のお願いをLINEで知らせる')}

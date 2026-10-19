@@ -447,7 +447,47 @@ function scheduleRender(){
 document.addEventListener('focusout',()=>{setTimeout(()=>{if(S.pendingRender){S.pendingRender=false;scheduleRender()}},0)});
 
 const TITLES={home:'テニス部連絡ノート',plan:'練習予定',ride:'送迎調整',money:'費用管理',talk:'連絡掲示板',record:'練習記録',me:'マイページ',safety:'緊急連絡・安全',admin:'管理者画面'};
+/* ---------- login password ---------- */
+// One shared password set by an admin. Admins (Editor and up) skip the lock screen.
+async function sha(text){
+  const bytes=new TextEncoder().encode(text);
+  if(window.crypto&&crypto.subtle){const buf=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+  return sha256js(bytes);
+}
+// fallback for views without crypto.subtle
+function sha256js(bytes){
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const l=bytes.length,n=((l+9+63)>>6)<<6,m=new Uint8Array(n);m.set(bytes);m[l]=0x80;
+  const dv=new DataView(m.buffer);dv.setUint32(n-4,l*8>>>0);dv.setUint32(n-8,Math.floor(l/0x20000000));
+  const w=new Uint32Array(64),r=(x,c)=>(x>>>c)|(x<<(32-c));
+  for(let o=0;o<n;o+=64){
+    for(let i=0;i<16;i++)w[i]=dv.getUint32(o+i*4);
+    for(let i=16;i<64;i++){const a=w[i-15],b=w[i-2];w[i]=(w[i-16]+(r(a,7)^r(a,18)^(a>>>3))+w[i-7]+(r(b,17)^r(b,19)^(b>>>10)))>>>0}
+    let [a,b,c,d,e,f,g,h]=H;
+    for(let i=0;i<64;i++){const t1=(h+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+K[i]+w[i])>>>0,t2=((r(a,2)^r(a,13)^r(a,22))+((a&b)^(a&c)^(b&c)))>>>0;h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0}
+    H[0]=(H[0]+a)>>>0;H[1]=(H[1]+b)>>>0;H[2]=(H[2]+c)>>>0;H[3]=(H[3]+d)>>>0;H[4]=(H[4]+e)>>>0;H[5]=(H[5]+f)>>>0;H[6]=(H[6]+g)>>>0;H[7]=(H[7]+h)>>>0;
+  }
+  return H.map(x=>x.toString(16).padStart(8,'0')).join('');
+}
+function unlockedHash(){if(S.unlocked)return S.unlocked;try{return localStorage.getItem('tennis.unlock')||''}catch(_){return ''}}
+function locked(){return !!S.settings.pwHash&&!S.admin&&unlockedHash()!==S.settings.pwHash}
+function renderLock(){
+  document.body.classList.remove('wide');
+  document.getElementById('top').innerHTML=`<span></span><h1>テニス部連絡ノート</h1><span></span>`;
+  document.getElementById('nav').innerHTML='';
+  document.getElementById('overlay').innerHTML='';
+  app.innerHTML=`<form class="card" data-form="unlock" style="margin-top:24px;align-items:center;text-align:center;gap:14px">
+    <span class="ball" style="width:44px;height:44px"></span>
+    <h2>ログイン</h2>
+    <p class="note">保護者に配られたパスワードを入力してください。</p>
+    <div class="field" style="width:100%;max-width:320px;text-align:left"><label for="lk-pw">パスワード</label><input id="lk-pw" type="password" autocomplete="current-password" data-draft="lk.pw" value="${esc(draft('lk.pw',''))}" autofocus></div>
+    ${S.lockErr?`<p class="note" style="color:var(--red)">${esc(S.lockErr)}</p>`:''}
+    <button class="btn primary" style="width:100%;max-width:320px;padding:12px">ひらく</button>
+    <p class="note">パスワードがわからないときは、管理担当の方に確認してください。</p></form>`;
+}
 function render(){
+  if(S.ready&&locked()){renderLock();return}
   document.body.classList.toggle('wide',S.tab==='admin'&&!S.detail);
   const todo=S.ready?todoItems():[];
   const top=document.getElementById('top');
@@ -471,6 +511,7 @@ function renderOverlay(todo){
     const items=[['home','home','ホーム'],['plan','plan','練習予定'],['ride','car','送迎調整'],['talk','talk','連絡掲示板'],['money','money','費用管理'],['record','record','練習記録'],['safety','shield','緊急連絡・安全'],['me','person','マイページ・家族']];
     if(S.admin)items.push(['admin','dash','管理者画面']);
     h+=`<div class="drawer" data-act="closeOverlay"><nav class="in" aria-label="メニュー" data-stop="1"><div class="brand"><span class="ball"></span>テニス部連絡ノート</div>${items.map(([k,i,l])=>`<button class="navitem${S.tab===k?' on':''}" data-act="tab" data-k="${k}">${ic(i)}${l}</button>`).join('')}
+      ${S.settings.pwHash&&!S.admin?`<button class="navitem" data-act="logout">${ic('back')}ログアウト</button>`:''}
       <p class="note" style="padding:14px 12px 0">${S.family.length?esc(S.family.map(name).join('・'))+' の保護者として利用中':'マイページでお子さんを選んでください'}</p></nav></div>`;
   }
   if(S.bell)h+=`<div class="drawer" data-act="closeOverlay" style="background:transparent"></div><div class="card bellpanel" role="dialog" aria-label="お知らせ"><div class="sec-t red">${ic('alert')}未対応の項目</div>${todoList(todo)}</div>`;
@@ -849,7 +890,7 @@ function viewAdmin(){
   const cnt=p=>{const r=S.responses.filter(x=>x.practiceId===p._id&&mem(x.memberId)&&x.attend==='yes');return {y:r.length,w:r.filter(x=>x.walkIn).length,o:S.members.length-r.length}};
   const nc=next?cnt(next):null;
   const unpaid=unpaidFamilies(S.month).size;
-  const side=[['a-dash','dash','ダッシュボード'],['a-plan','plan','予定管理'],['a-att','check','参加管理'],['a-ride','car','送迎調整'],['a-money','money','費用管理'],['a-talk','talk','連絡掲示板'],['a-rec','record','練習記録'],['a-mem','users','メンバー管理'],['a-set','gear','設定']];
+  const side=[['a-dash','dash','ダッシュボード'],['a-plan','plan','予定管理'],['a-att','check','参加管理'],['a-ride','car','送迎調整'],['a-money','money','費用管理'],['a-talk','talk','連絡掲示板'],['a-rec','record','練習記録'],['a-mem','users','メンバー管理'],['a-set','gear','設定'],['a-pw','shield','パスワード']];
   let h=`<div class="admin"><nav class="side" aria-label="管理メニュー"><div class="row" style="padding:6px 10px 10px;font-weight:900"><span class="ball"></span>テニス部連絡ノート</div>${side.map(([id,i,l])=>`<button class="navitem" data-act="jump" data-k="${id}">${ic(i)}${l}</button>`).join('')}</nav><div class="main">`;
   h+=`<section class="card" id="a-dash"><h2>ダッシュボード</h2><div class="kpis">
     <div class="card kpi" style="box-shadow:none"><span class="ic g">${ic('clock')}</span><div><div class="small muted">次回の練習</div><div class="v">${next?mdw(next.date):'—'}</div>${next?`<div class="small muted">${esc(next.place)}</div>`:''}</div></div>
@@ -889,6 +930,14 @@ function viewAdmin(){
     <div class="field wide"><label for="st-proc">緊急時の手順</label><textarea id="st-proc" data-draft="st.procedure" placeholder="例：1. けがをしたら練習を止める 2. 責任者に連絡 3. 保護者へ電話">${esc(draft('st.procedure',s.procedure||''))}</textarea></div></div>
     <p class="note">連絡先はこのページを開ける全員に表示されます。個人の電話番号は本人の了承を取ってから載せてください。</p>
     <div class="actions"><button class="btn sm primary">保存する</button></div></form>`;
+  h+=`<form class="card" id="a-pw" data-form="password"><h2>ログイン用パスワード</h2>
+    <p class="note">${s.pwHash?`<span class="pill">設定あり</span> ${s.pwSetAt?stamp(s.pwSetAt)+'に設定':''}　保護者はこのページを開くとパスワードを聞かれます。`:'<span class="pill grey">設定なし</span>　設定すると、保護者はこのページを開くときにパスワードが必要になります。'}</p>
+    <div class="fgrid">
+      <div class="field"><label for="pw1">${s.pwHash?'新しいパスワード':'パスワード'}（4文字以上）</label><input id="pw1" type="password" autocomplete="new-password" data-draft="pw.1" value="${esc(draft('pw.1',''))}"></div>
+      <div class="field"><label for="pw2">もう一度入力</label><input id="pw2" type="password" autocomplete="new-password" data-draft="pw.2" value="${esc(draft('pw.2',''))}"></div>
+    </div>
+    <p class="note">変更すると、全員がもう一度入力する必要があります。管理担当（Editor）はパスワードなしで開けます。パスワードは保護者にLINEなどで伝えてください。</p>
+    <div class="actions">${s.pwHash?(S.confirm==='pwclear'?`<button type="button" class="btn sm danger" data-act="pwClear">本当にパスワードをなくす</button>`:`<button type="button" class="link muted" data-act="confirm" data-k="pwclear">パスワードをなくす</button>`):''}<button class="btn sm primary">${s.pwHash?'変更する':'設定する'}</button></div></form>`;
   return h+'</div></div>';
 }
 
@@ -1070,6 +1119,8 @@ document.addEventListener('click',async e=>{
     case 'rideDecline':await write(()=>col('rides').doc(r).update({status:'declined',updatedAt:Date.now()}));break;
     case 'rideUndo':await write(()=>col('rides').doc(r).delete(),'送迎の決定を取り消しました');break;
     case 'rideDel':await write(()=>col('rides').doc(r).delete(),'依頼を取り消しました');break;
+    case 'pwClear':{S.confirm=null;if(!S.admin)break;const rest={...S.settings};delete rest.pwHash;delete rest.pwSalt;delete rest.pwSetAt;await write(()=>S.db.doc('settings/app').set(rest),'パスワードをなくしました');break}
+    case 'logout':S.unlocked='';try{localStorage.removeItem('tennis.unlock')}catch(_){}S.drawer=false;break;
     case 'settle':{
       S.confirm=null;
       const o=transfers(S.month)[Number(k)];if(!o)break;
@@ -1192,7 +1243,21 @@ document.addEventListener('submit',async e=>{
   if(kind==='settings'){
     const s=S.settings;
     const data={round:Number(draft('st.round',s.round||10)),leader:String(draft('st.leader',s.leader||'')).trim(),contact:String(draft('st.contact',s.contact||'')).trim(),procedure:String(draft('st.procedure',s.procedure||'')).trim()};
-    if(await write(()=>S.db.doc('settings/app').set(data),'保存しました'))clearDrafts('st.');
+    if(await write(()=>S.db.doc('settings/app').set({...S.settings,...data}),'保存しました'))clearDrafts('st.');
+  }
+  if(kind==='password'){
+    if(!S.admin)return;
+    const p1=String(draft('pw.1','')),p2=String(draft('pw.2',''));
+    if(p1.length<4){toast('パスワードは4文字以上にしてください');return}
+    if(p1!==p2){toast('2回入力したパスワードが違います');return}
+    const salt=[...crypto.getRandomValues(new Uint8Array(12))].map(b=>b.toString(16).padStart(2,'0')).join('');
+    const pwHash=await sha(salt+':'+p1);
+    if(await write(()=>S.db.doc('settings/app').set({...S.settings,pwSalt:salt,pwHash,pwSetAt:Date.now()}),'パスワードを設定しました'))clearDrafts('pw.');
+  }
+  if(kind==='unlock'){
+    const h=await sha((S.settings.pwSalt||'')+':'+String(draft('lk.pw','')));
+    if(h===S.settings.pwHash){S.unlocked=h;S.lockErr='';clearDrafts('lk.');try{localStorage.setItem('tennis.unlock',h)}catch(_){}}
+    else S.lockErr='パスワードが違います。';
   }
   S.pendingRender=false;render();
 });

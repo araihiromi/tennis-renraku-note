@@ -9,6 +9,6 @@ self.FIREBASE_CONFIG = {
   appId: ""
 };
 // 「Cloud Messaging」→「ウェブプッシュ証明書」の鍵ペア（公開鍵）
-self.VAPID_KEY = "";
+self.VAPID_KEY = "BIE1QUw-Ag_lW9DLjYph8zqaLblFAAN8Fopq5PpZPWIfBie_X7V4usYZpZdUzQrbxJJUbfbT2fEckcYJBb33MV0";
 // テスト用：true にするとこのパソコンの Firebase エミュレーターにつなぐ
 self.USE_EMULATOR = false;

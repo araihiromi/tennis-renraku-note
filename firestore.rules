@@ -17,17 +17,6 @@ service cloud.firestore {
     }
     function newData() { return request.resource.data; }
     function oldData() { return resource.data; }
-    // 氏名以外の個人情報（電話番号・メールアドレス・郵便番号）が入った文章は保存させない
-    function clean(v) {
-      return !(v is string) || !(
-        v.matches('(?s).*[0-9０-９]([-－ー‐−()（） \t\n]*[0-9０-９]){9,}.*')
-        || v.matches('(?s).*[A-Za-z0-9._%+-]+[@＠][A-Za-z0-9.-]+[.][A-Za-z]{2,}.*')
-        || v.matches('(?s).*〒.*'));
-    }
-    function cleanFields(m, keys) {
-      return clean(m.get(keys[0], '')) && (keys.size() < 2 || clean(m.get(keys[1], ''))) && (keys.size() < 3 || clean(m.get(keys[2], '')))
-        && (keys.size() < 4 || clean(m.get(keys[3], ''))) && (keys.size() < 5 || clean(m.get(keys[4], '')));
-    }
     function unchanged(keys) { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(keys); }
 
     match /secrets/{id} { allow read, write: if false; }
@@ -35,26 +24,21 @@ service cloud.firestore {
 
     match /settings/{id} {
       allow read: if signed();
-      allow write: if isAdmin() && cleanFields(newData(), ['leader', 'procedure', 'contact']);
+      allow write: if isAdmin();
     }
 
-    // 児童（お子さん）：管理者が登録。家庭は兄弟姉妹を自分の家庭に追加できる
+    // 選手（お子さん）：管理者が登録。家庭は兄弟姉妹を自分の家庭に追加できる
     match /members/{id} {
       allow read: if signed();
-      allow create: if cleanFields(newData(), ['name', 'parent']) && (isAdmin() || (signed() && ('fam' in request.auth.token) && newData().family == fam()));
-      allow update: if isAdmin() && cleanFields(newData(), ['name', 'parent']);
-      allow delete: if isAdmin();
+      allow create: if isAdmin() || (signed() && ('fam' in request.auth.token) && newData().family == fam());
+      allow update, delete: if isAdmin();
     }
 
-    function cleanPractice() {
-      return cleanFields(newData(), ['place', 'meetPlace', 'bring', 'note', 'cancelReason'])
-        && cleanFields(newData().get('record', {}), ['menu', 'memo', 'next', 'balls', 'info']);
-    }
     // 練習予定：ログインした家庭なら作成・編集できる。削除は作った家庭か管理者
     match /practices/{id} {
       allow read: if signed();
-      allow create: if cleanPractice() && (isAdmin() || mine(newData().createdBy));
-      allow update: if cleanPractice() && (isAdmin() || (signed() && ('fam' in request.auth.token) && unchanged(['createdBy', 'createdAt'])));
+      allow create: if isAdmin() || mine(newData().createdBy);
+      allow update: if isAdmin() || (signed() && ('fam' in request.auth.token) && unchanged(['createdBy', 'createdAt']));
       allow delete: if isAdmin() || mine(oldData().createdBy);
     }
 
@@ -63,7 +47,6 @@ service cloud.firestore {
       allow read: if signed();
       allow create, update: if newData().memberId is string && newData().practiceId is string
         && id == newData().practiceId + '__' + newData().memberId
-        && cleanFields(newData(), ['route', 'pickup'])
         && (isAdmin() || (mine(newData().memberId) && newData().get('walkIn', false) == false));
       allow delete: if isAdmin() || mine(oldData().memberId);
     }
@@ -71,37 +54,37 @@ service cloud.firestore {
     // 送迎：お願いは乗る子の家庭、引き受け（accepted）は車を出す家庭
     match /rides/{id} {
       allow read: if signed();
-      allow create: if cleanFields(newData(), ['message', 'meetPoint']) && (isAdmin() || mine(newData().fromId) || (newData().status == 'accepted' && mine(newData().byId)));
-      allow update: if cleanFields(newData(), ['message', 'meetPoint']) && (isAdmin() || mine(oldData().fromId) || mine(oldData().get('toId', ''))
-        || (newData().status == 'accepted' && mine(newData().byId)) || mine(oldData().get('byId', '')));
+      allow create: if isAdmin() || mine(newData().fromId) || (newData().status == 'accepted' && mine(newData().byId));
+      allow update: if isAdmin() || mine(oldData().fromId) || mine(oldData().get('toId', ''))
+        || (newData().status == 'accepted' && mine(newData().byId)) || mine(oldData().get('byId', ''));
       allow delete: if isAdmin() || mine(oldData().fromId) || mine(oldData().get('byId', ''));
     }
 
     // 支払い：払った家庭が記録。月末の精算は受け取る側の家庭も記録できる
     match /payments/{id} {
       allow read: if signed();
-      allow create: if cleanFields(newData(), ['note']) && (isAdmin() || mine(newData().memberId) || (newData().get('settle', false) == true && mine(newData().get('to', ''))));
+      allow create: if isAdmin() || mine(newData().memberId) || (newData().get('settle', false) == true && mine(newData().get('to', '')));
       allow delete: if isAdmin() || mine(oldData().memberId);
       allow update: if isAdmin();
     }
 
     match /costs/{id} {
       allow read: if signed();
-      allow create: if cleanFields(newData(), ['note', 'kind']) && (isAdmin() || mine(newData().createdBy));
+      allow create: if isAdmin() || mine(newData().createdBy);
       allow delete: if isAdmin() || mine(oldData().createdBy);
       allow update: if isAdmin();
     }
 
     match /posts/{id} {
       allow read: if signed();
-      allow create: if cleanFields(newData(), ['title', 'body']) && (isAdmin() || mine(newData().authorId));
+      allow create: if isAdmin() || mine(newData().authorId);
       allow update: if isAdmin();
       allow delete: if isAdmin() || mine(oldData().authorId);
     }
 
     match /comments/{id} {
       allow read: if signed();
-      allow create: if cleanFields(newData(), ['body']) && (isAdmin() || mine(newData().authorId));
+      allow create: if isAdmin() || mine(newData().authorId);
       allow delete: if isAdmin() || mine(oldData().authorId);
     }
 

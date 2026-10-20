@@ -18,26 +18,16 @@
 
 ## 2. サーバーに上げる（Google Cloud Shell を使う）
 
-自分のパソコンに何も入れずにできます。
+自分のパソコンに何も入れずにできます。**1行ずつ**貼り付けて Enter を押してください。
 
 1. Firebase と同じ Google アカウントで https://shell.cloud.google.com を開く。
-2. 次を 1 行ずつ貼り付けて実行する。
-
-```sh
-git clone https://github.com/araihiromi/tennis-renraku-note.git
-cd tennis-renraku-note
-# セットアップキー（最初の管理者パスワードを決めるときに1回だけ使う）を作って表示する。メモしておく
-echo "SETUP_KEY=$(openssl rand -hex 12)" > functions/.env
-echo "APP_URL=https://tennis-renraku-note.web.app/" >> functions/.env
-cat functions/.env
-npm --prefix functions ci
-npx firebase-tools@15.32.1 login --no-localhost
-npx firebase-tools@15.32.1 deploy --project tennis-renraku-note
-```
-
-- `git clone` でユーザー名とパスワードを聞かれたら、GitHub のユーザー名と「Personal access token」（GitHub の Settings → Developer settings で作成）を入れます。
-- `login` で表示される URL を開いて許可し、出てきたコードを貼り付けます。
-- 終わると `https://tennis-renraku-note.web.app` で開けるようになります。
+2. 前の残りを消す：`cd ~ && rm -rf tennis-renraku-note`
+3. ダウンロード：`git clone https://github.com/araihiromi/tennis-renraku-note.git`
+   - `Username` と出て止まったら `araihiromi`、`Password` と出て止まったら GitHub のトークン（画面には出ない）を入れる。
+4. 公開：`bash ~/tennis-renraku-note/deploy.sh`
+   - 準備 → セットアップキーの表示（紙にメモ）→ Firebase へのログイン → 公開、の順に自動で進みます。
+   - 終わると `https://tennis-renraku-note.web.app` で開けるようになります。
+   - 途中で止まったら、もう一度同じ行を実行すれば続きから進みます（セットアップキーは変わりません）。
 
 ## 3. 使いはじめ
 
@@ -49,7 +39,7 @@ npx firebase-tools@15.32.1 deploy --project tennis-renraku-note
 
 ## 更新するとき
 
-Cloud Shell で `cd tennis-renraku-note && git pull && npx firebase-tools@15.32.1 deploy --project tennis-renraku-note`。
+Cloud Shell で `cd ~/tennis-renraku-note && git pull` のあと `bash ~/tennis-renraku-note/deploy.sh`。
 
 ## テスト
 

@@ -139,12 +139,14 @@ exports.setupAdmin = onCall(async (req) => {
   const {setupKey, password} = req.data || {};
   if (!key || String(setupKey || '') !== key) throw new HttpsError('permission-denied', 'セットアップキーが違います。');
   if (typeof password !== 'string' || password.length < 8) throw new HttpsError('invalid-argument', '管理者パスワードは8文字以上にしてください。');
+  // 先にログイン用トークンを作れることを確かめてから保存する（権限不足で保存だけ済むのを防ぐ）
+  const token = await tokenFor((req.auth && req.auth.token.fam) || null, true);
   const ref = secrets('admin');
   await db.runTransaction(async (t) => {
-    if ((await t.get(ref)).exists) throw new HttpsError('already-exists', '管理者パスワードはすでに設定されています。');
+    if ((await t.get(ref)).exists) throw new HttpsError('already-exists', '管理者パスワードはすでに設定されています。「最初の画面にもどる」から管理者パスワードでひらいてください。');
     t.set(ref, {...makeSecret(password), setAt: Date.now()});
   });
-  return {token: await tokenFor((req.auth && req.auth.token.fam) || null, true)};
+  return {token};
 });
 
 exports.changeAdminPassword = onCall(async (req) => {

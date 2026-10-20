@@ -1397,7 +1397,7 @@ document.addEventListener('submit',async e=>{
     }else{fn='adminLogin';data={password:String(draft(kind==='admin-enter'?'ad-pw':'ar-pw',''))}}
     S.busy=true;S.lockErr='';render();
     try{const r=await TENNIS.call(fn,data);['ls-','le-','ad-','as-','ar-'].forEach(clearDrafts);closeSheet();await afterSignIn(r.token)}
-    catch(e){S.lockErr=errMsg(e);if(kind==='admin-reauth')toast(S.lockErr);['ls-1','ls-2','le-pw','ad-pw','ar-pw','as-1','as-2'].forEach(k=>delete S.drafts[k])}
+    catch(e){S.lockErr=errMsg(e);if(kind==='admin-set'&&e&&/already-exists/.test(e.code||'')){S.adminReady=true}if(kind==='admin-reauth')toast(S.lockErr);['ls-1','ls-2','le-pw','ad-pw','ar-pw','as-1','as-2'].forEach(k=>delete S.drafts[k])}
     S.busy=false;
   }
   if(kind==='admin-change'){

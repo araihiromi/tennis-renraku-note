@@ -973,7 +973,7 @@ function viewMe(){
       <div class="line"><span>未精算</span><span class="amt ${due>0?'minus':''}">${yen(due)}</span></div></section>`;
   }
   h+=`<section class="card" id="push"><h2>通知の設定</h2>${pushCard(true)}
-    <p class="note">練習予定・送迎・連絡の新規登録や変更、管理者が参加を記録したときに、この端末に通知が届きます。通知は端末ごとの設定です。家族のスマートフォンそれぞれでオンにしてください。</p>
+    <p class="note">練習予定・送迎・連絡の新規登録や変更、管理者が参加を記録したときに、この端末に通知が届きます。<strong>自分の家庭が登録・変更したものは、自分には通知されません</strong>（ほかの家庭に届きます）。通知は端末ごとの設定です。家族のスマートフォンそれぞれでオンにしてください。</p>
     <p class="note"><strong>iPhone の場合</strong>：Safari の共有ボタン →「ホーム画面に追加」で追加したアプリから開いて、オンにしてください（iOS 16.4 以降）。</p></section>`;
   return h;
 }

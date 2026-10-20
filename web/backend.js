@@ -5,7 +5,7 @@ import {getAuth, signInWithCustomToken, signOut, setPersistence, inMemoryPersist
 import {getFirestore, connectFirestoreEmulator, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import {getFunctions, httpsCallable, connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js';
 import {getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, connectStorageEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js';
-import {getMessaging, getToken, deleteToken, isSupported} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging.js';
+import {getMessaging, getToken, deleteToken, isSupported, onMessage} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging.js';
 
 const app = initializeApp(self.FIREBASE_CONFIG);
 const auth = getAuth(app);
@@ -72,6 +72,20 @@ const assets = {
 
 const call = (name, data) => httpsCallable(fn, name)(data || {}).then((r) => r.data).catch((e) => { throw {code: e.code, message: e.message}; });
 
+// アプリを開いているあいだに届いた通知も画面に出す（開いているときはブラウザが自動では出さないため）
+let listening = false;
+async function listenForeground() {
+  try {
+    if (listening || !(await push.supported()) || Notification.permission !== 'granted') return;
+    listening = true;
+    const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+    onMessage(getMessaging(app), (p) => {
+      const n = p.notification || {};
+      reg.showNotification(n.title || 'テニス部連絡ノート', {body: n.body || '', icon: 'icon-192.png', badge: 'icon-192.png', tag: p.messageId});
+    });
+  } catch (_) { listening = false; }
+}
+
 // プッシュ通知（この端末で受け取る）
 const push = {
   async supported() { try { return 'Notification' in self && 'serviceWorker' in navigator && await isSupported(); } catch (_) { return false; } },
@@ -85,6 +99,7 @@ const push = {
     const token = await getToken(getMessaging(app), {vapidKey: self.VAPID_KEY, serviceWorkerRegistration: reg});
     await setDoc(doc(fs, 'pushTokens', token), {fam, uid: auth.currentUser.uid, at: Date.now()});
     try { localStorage.setItem('tennis.pushToken', token); } catch (_) {}
+    listenForeground();
     return token;
   },
   // ログインのたびに、この端末の宛先をいまの家庭にそろえる
@@ -92,6 +107,7 @@ const push = {
     const t = push.token();
     if (!t || push.permission() !== 'granted' || !fam) return;
     try { await setDoc(doc(fs, 'pushTokens', t), {fam, uid: auth.currentUser.uid, at: Date.now()}); } catch (_) {}
+    listenForeground();
   },
   async disable() {
     const t = push.token();

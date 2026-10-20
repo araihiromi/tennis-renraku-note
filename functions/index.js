@@ -4,6 +4,7 @@
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {onDocumentWritten} = require('firebase-functions/v2/firestore');
 const {setGlobalOptions} = require('firebase-functions/v2');
+const {logger} = require('firebase-functions');
 const {initializeApp} = require('firebase-admin/app');
 const {getFirestore} = require('firebase-admin/firestore');
 const {getAuth} = require('firebase-admin/auth');
@@ -218,6 +219,7 @@ async function push(to, title, body, link) {
     if (to.only) return f === to.only;
     return !to.except || f !== to.except;
   });
+  logger.info('push', {title, to, registeredDevices: snap.size, targets: targets.length});
   if (!targets.length) return 0;
   const tokens = targets.map((d) => d.id);
   if (process.env.FUNCTIONS_EMULATOR === 'true') {
@@ -230,6 +232,8 @@ async function push(to, title, body, link) {
     notification: {title, body},
     webpush: {fcmOptions: {link: APP_URL + (link || '')}, notification: {icon: APP_URL + 'icon-192.png', badge: APP_URL + 'icon-192.png'}},
   });
+  logger.info('push result', {title, success: res.successCount, failure: res.failureCount,
+    errors: res.responses.filter((r) => r.error).map((r) => r.error.code)});
   // 使えなくなった端末の登録を消す
   await Promise.all(res.responses.map((r, i) => {
     const code = r.error && r.error.code;

@@ -37,7 +37,26 @@ fi
 
 echo
 echo "=== 4/4 公開しています（5〜10分。そのまま待ってください） ==="
-$FB deploy --project "$PROJECT" --force
+CORE="hosting,firestore,storage"
+for f in loginList login register adminLogin setupAdmin changeAdminPassword authStatus issueCode resetPassword; do CORE="$CORE,functions:$f"; done
+NOTIFY="functions:notifyPractice,functions:notifyRide,functions:notifyPost,functions:notifyComment,functions:notifyWalkIn"
+
+echo "   (1) アプリ本体（画面・ログイン・データ）"
+$FB deploy --project "$PROJECT" --only "$CORE" --force
+
+echo
+echo "   (2) プッシュ通知（はじめての公開では準備に時間がかかるので、失敗したら待ってやり直します）"
+ok=""
+for i in 1 2 3 4; do
+  if $FB deploy --project "$PROJECT" --only "$NOTIFY" --force; then ok=1; break; fi
+  if [ "$i" -lt 4 ]; then echo; echo "   通知の準備がまだのようです。2分待ってもう一度試します（$i/3）…"; sleep 120; fi
+done
+if [ -z "$ok" ]; then
+  echo
+  echo "   アプリ本体は公開できましたが、プッシュ通知の公開に失敗しました。"
+  echo "   10分ほど待ってから、もう一度 bash ~/tennis-renraku-note/deploy.sh を実行してください。"
+  echo "   何度やっても失敗する場合は、Firestore Database の場所が asia-northeast1（Tokyo）か確認してください。"
+fi
 
 echo
 echo "=================================================="

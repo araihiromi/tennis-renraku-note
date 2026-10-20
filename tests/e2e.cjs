@@ -25,7 +25,7 @@ const log=(...a)=>console.log(...a);let fails=0;const ok=(c,msg)=>{log((c?'PASS 
  await A.fill('#as-key','wrong-key');await A.fill('#as-1','adminpass1');await A.fill('#as-2','adminpass1');await A.click('form[data-form=admin-set] button');await A.waitForSelector('text=セットアップキーが違います');ok(true,'wrong setup key rejected');
  await A.fill('#as-key','test-setup-key');await A.fill('#as-1','adminpass1');await A.fill('#as-2','adminpass1');await A.click('form[data-form=admin-set] button');
  await A.waitForSelector('#a-mem',{timeout:20000});ok(true,'admin set up and opened admin screen');
- const addMember=async(n,p,fam)=>{await A.fill('#ma-name',n);await A.fill('#ma-parent',p);if(fam)await A.selectOption('#ma-fam',{label:fam});await A.click('form[data-form=member-admin] button');await A.waitForFunction(x=>document.querySelector('main').textContent.includes(x),n)};
+ const addMember=async(n,p,fam)=>{await A.fill('#ma-name',n);await A.fill('#ma-parent',p);if(!fam)await A.selectOption('#ma-fam',{label:'新規登録'});if(fam)await A.selectOption('#ma-fam',{label:fam});await A.click('form[data-form=member-admin] button');await A.waitForFunction(x=>document.getElementById('toast').textContent.includes(x+'さんを登録しました'),n,{timeout:30000});await A.waitForFunction(x=>document.querySelector('main').textContent.includes(x),n)};
  await addMember('山田 太郎','山田');await addMember('鈴木 一郎','鈴木');await addMember('山田 次郎','山田','山田 太郎の兄弟姉妹');
  ok(true,'3 children registered by admin');
  await A.waitForSelector('[data-act=issueCode]',{timeout:20000});
@@ -72,6 +72,17 @@ const log=(...a)=>console.log(...a);let fails=0;const ok=(c,msg)=>{log((c?'PASS 
  ok(r5.startsWith('denied'),'parent cannot issue registration codes ('+r5+')');
  const r6=await Y.evaluate(async()=>{const db=await window.claude.use('db');try{await db.doc('settings/app').set({round:1});return 'allowed'}catch(e){return 'denied:'+e.code}});
  ok(r6.startsWith('denied'),'parent cannot change settings ('+r6+')');
+ // ---------- personal information is blocked ----------
+ await Y.click('nav.bottom button:has-text("連絡")');await Y.click('[data-act=sheet][data-k=post]');
+ await Y.fill('#po-title','送迎の件');await Y.fill('#po-body','山田です。090-1234-5678 に連絡ください');await Y.click('form[data-form=post] button.primary');await wait(400);
+ ok((await Y.textContent('#toast')).includes('個人情報'),'phone number in a post is refused on screen');
+ await Y.fill('#po-body','yamada@example.com まで');await Y.click('form[data-form=post] button.primary');await wait(400);
+ ok((await Y.textContent('#toast')).includes('個人情報')&&(await adb.collection('posts').get()).size===0,'email in a post is refused on screen');
+ await Y.click('.sheet button[data-act=closeSheet]');
+ const r7=await Y.evaluate(async([tid])=>{const db=await window.claude.use('db');try{await db.collection('posts').add({title:'連絡',body:'電話 0901234５６７８',level:'normal',authorId:tid,createdAt:Date.now()});return 'allowed'}catch(e){return 'denied:'+e.code}},[tid]);
+ ok(r7.startsWith('denied'),'server refuses a phone number written directly ('+r7+')');
+ const r8=await Y.evaluate(async([tid])=>{const db=await window.claude.use('db');try{await db.collection('posts').add({title:'10/25の集合',body:'2026-10-25 8:45 管理棟前に集合。持ち物 4,000円',level:'normal',authorId:tid,createdAt:Date.now()});return 'allowed'}catch(e){return 'denied:'+e.code}},[tid]);
+ ok(r8==='allowed','dates, times and amounts are still allowed ('+r8+')');
  // ---------- admin screen needs the admin password ----------
  await Y.click('[data-act=drawer]');await Y.click('.navitem:has-text("管理者画面")');await Y.fill('#ar-pw','nope-nope');await Y.click('.sheet button.primary');await wait(1500);
  ok(!(await Y.$('#a-mem')),'wrong admin password keeps admin screen closed');

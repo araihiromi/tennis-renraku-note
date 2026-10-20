@@ -346,7 +346,7 @@ function monthLabel(m){const [y,mm]=m.split('-');return y+'年'+Number(mm)+'月'
 function mnum(m){return Number(m.split('-')[1])+'月'}
 function shiftMonth(m,k){const [y,mm]=m.split('-').map(Number);return ym(new Date(y,mm-1+k,1))}
 function mem(id){return S.members.find(x=>x._id===id)}
-function name(id){return mem(id)?.name||'（削除された選手）'}
+function name(id){return mem(id)?.name||'（削除された児童）'}
 function famKey(id){return mem(id)?.family||id}
 function famLabel(id){const k=famKey(id);const h=mem(k)||mem(id);if(!h)return '（不明）';const par=(mem(id)?.parent)||h.parent;return par?par+'さん':h.name+'の保護者'}
 function famCount(){return new Set(S.members.map(m=>m.family||m._id)).size}
@@ -603,7 +603,7 @@ function monthNav(){
 }
 function needFamily(){
   if(S.family.length)return '';
-  return `<div class="warn">はじめに「マイページ」でお子さん（選手）を選んでください。兄弟姉妹がいる場合は複数選べます。 <button class="link" data-act="tab" data-k="me">マイページへ</button></div>`;
+  return `<div class="warn">はじめに「マイページ」でお子さん（児童）を選んでください。兄弟姉妹がいる場合は複数選べます。 <button class="link" data-act="tab" data-k="me">マイページへ</button></div>`;
 }
 function facts(p,full){
   const f=[[ 'clock',(p.start||'')+(p.end?' 〜 '+p.end:'')],['pin',`${p.place}　<span class="courtno">${esc(p.court)}番コート</span>`,true]];
@@ -841,7 +841,7 @@ function moneyHistory(){
   return h+`<div class="lines">${list.map(x=>{const pr=practice(x.practiceId),c=S.costs.find(y=>y._id===x.costId);const can=S.admin||isMine(x.memberId);return `<div class="line"><div><div><strong>${mdw(x.date)}</strong> ${esc(famLabel(x.memberId))}</div><div class="sub">${x.to?esc(famLabel(x.to))+'へ精算':'会計・コートへ'}${c?' ・ '+esc(c.kind):pr?' ・ '+md(pr.date)+'のテニスコート代金':''}${x.note?' ・ '+esc(x.note):''}</div></div><div class="row" style="gap:8px"><span class="amt">${yen(x.amount)}</span>${can?(S.confirm==='pay:'+x._id?`<button class="btn sm danger" data-act="delPay" data-r="${x._id}">削除</button>`:`<button class="link muted" data-act="confirm" data-k="pay:${x._id}">削除</button>`):''}</div></div>`}).join('')}</div>`;
 }
 function moneySummary(){
-  if(!S.members.length)return '<p class="note">選手が登録されていません。</p>';
+  if(!S.members.length)return '<p class="note">児童が登録されていません。</p>';
   const F=famBalances(S.month);
   let h=paidTable(S.month);
   // 払う側の一覧は管理者だけ。保護者には自分の家庭の分だけ
@@ -891,9 +891,9 @@ function viewTalk(){
 function viewSafety(){
   const s=S.settings;
   let h=`<section class="card"><h2>緊急時の連絡手順</h2>
-    <div class="lines"><div class="line"><span class="muted">活動の責任者</span><span>${esc(s.leader||'未設定')}</span></div><div class="line"><span class="muted">緊急連絡先</span><span>${esc(s.contact||'未設定')}</span></div></div>
+    <div class="lines"><div class="line"><span class="muted">活動の責任者</span><span>${esc(s.leader||'未設定')}</span></div></div>
     ${s.procedure?`<p style="white-space:pre-wrap;margin:0">${esc(s.procedure)}</p>`:'<p class="note">けが・事故・急な天候悪化のときの手順は、管理者が管理者画面で登録します。</p>'}
-    <div class="notice"><div class="t">${ic('alert')}通知について</div><p>このアプリはプッシュ通知を送りません。雨天中止などの緊急連絡を確認していない家庭には、責任者が電話などで連絡してください。</p></div></section>`;
+    <div class="notice"><div class="t">${ic('alert')}通知について</div><p>緊急連絡は、通知をオンにしている端末にプッシュ通知で届きます。通知をオフにしている家庭や、確認していない家庭には、責任者が直接連絡してください。</p></div></section>`;
   const em=S.posts.filter(p=>p.level==='emergency').sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,5);
   if(em.length)h+=`<section class="card"><h2>最近の緊急連絡</h2><div>${em.map(postItem).join('')}</div></section>`;
   return h;
@@ -935,9 +935,9 @@ function viewRecord(){
 /* ----- 月間参加記録 ----- */
 function statsTable(withMoney){
   const ps=monthPractices().filter(p=>p.status!=='cancelled');
-  if(!S.members.length)return `<div class="empty"><strong>選手がまだ登録されていません</strong><span>「マイページ」からお子さんを登録してください。</span></div>`;
+  if(!S.members.length)return `<div class="empty"><strong>児童がまだ登録されていません</strong><span>「マイページ」からお子さんを登録してください。</span></div>`;
   const {L}=withMoney?ledger(S.month):{L:{}};
-  let h=`<div class="scroll"><table><thead><tr><th class="sticky">選手</th><th class="num">参加日数</th>${withMoney?'<th class="num">負担額</th><th class="num">差額</th>':''}${ps.map(p=>`<th class="c">${md(p.date)}<br><span style="font-weight:400">${wd(p.date)}</span></th>`).join('')}<th>参加した日</th></tr></thead><tbody>`;
+  let h=`<div class="scroll"><table><thead><tr><th class="sticky">児童</th><th class="num">参加日数</th>${withMoney?'<th class="num">負担額</th><th class="num">差額</th>':''}${ps.map(p=>`<th class="c">${md(p.date)}<br><span style="font-weight:400">${wd(p.date)}</span></th>`).join('')}<th>参加した日</th></tr></thead><tbody>`;
   for(const m of S.members){
     const days=ps.filter(p=>resp(p._id,m._id)?.attend==='yes');const set=new Set(days.map(p=>p._id));
     const b=L[m._id];
@@ -1005,29 +1005,29 @@ function viewAdmin(){
   const recN=S.practices.filter(p=>p.record).length,noRec=S.practices.filter(p=>p.date<today()&&p.status!=='cancelled'&&!p.record).length;
   h+=`<section class="card" id="a-rec"><h2>練習記録</h2><p class="note">記録あり ${recN}件 ・ 記録のない終わった練習 ${noRec}件</p><button class="btn sm outline" data-act="tab" data-k="record" style="align-self:flex-start">練習記録を開く</button></section>`;
   h+=`<section class="card" id="a-mem"><h2>メンバー管理</h2>
-    <form data-form="member-admin" class="fgrid"><h3 class="wide">選手の登録</h3>
-      <div class="field"><label for="ma-name">選手名</label><input id="ma-name" data-draft="ma.name" value="${esc(draft('ma.name',''))}" placeholder="例：山田 太郎"></div>
+    <form data-form="member-admin" class="fgrid"><h3 class="wide">児童の登録</h3>
+      <p class="note wide">登録するのは児童と保護者の氏名だけです。電話番号や住所などは登録しません。</p>
+      <div class="field"><label for="ma-name">児童名</label><input id="ma-name" data-draft="ma.name" value="${esc(draft('ma.name',''))}" placeholder="例：山田 太郎"></div>
       <div class="field"><label for="ma-parent">保護者名</label><input id="ma-parent" data-draft="ma.parent" value="${esc(draft('ma.parent',''))}" placeholder="例：山田 花子"></div>
-      <div class="field wide"><label for="ma-fam">家庭</label><select id="ma-fam" data-draft="ma.fam"><option value="">新しい家庭</option>${[...new Set(S.members.map(m=>famKey(m._id)))].map(k=>`<option value="${esc(k)}"${draft('ma.fam','')===k?' selected':''}>${esc(famOf(k).map(name).join('・'))}の兄弟姉妹</option>`).join('')}</select></div>
+      <div class="field wide"><label for="ma-fam">家庭</label><select id="ma-fam" data-draft="ma.fam"><option value="">新規登録</option>${[...new Set(S.members.map(m=>famKey(m._id)))].map(k=>`<option value="${esc(k)}"${draft('ma.fam','')===k?' selected':''}>${esc(famOf(k).map(name).join('・'))}の兄弟姉妹</option>`).join('')}</select></div>
       <div class="actions wide"><button class="btn sm primary">登録する</button></div></form>`;
   if(S.members.length){
-    h+=`<div class="scroll"><table><thead><tr><th>選手名</th><th>保護者名</th><th>家族</th><th class="num">通算参加</th><th></th></tr></thead><tbody>`;
+    h+=`<div class="scroll"><table><thead><tr><th>児童名</th><th>保護者名</th><th>家族</th><th class="num">通算参加</th><th></th></tr></thead><tbody>`;
     for(const m of S.members){
       const tot=S.responses.filter(r=>r.memberId===m._id&&r.attend==='yes'&&S.practices.some(p=>p._id===r.practiceId&&p.status!=='cancelled')).length;
       const sib=S.members.filter(x=>x._id!==m._id&&famKey(x._id)===famKey(m._id)).map(x=>x.name);
-      h+=S.open['mem:'+m._id]?`<tr><td><input class="btn sm" style="font-weight:400" aria-label="選手名" id="em-n-${m._id}" data-draft="em.${m._id}.n" value="${esc(draft('em.'+m._id+'.n',m.name))}"></td><td><input class="btn sm" style="font-weight:400" aria-label="保護者名" id="em-p-${m._id}" data-draft="em.${m._id}.p" value="${esc(draft('em.'+m._id+'.p',m.parent||''))}"></td><td>${esc(sib.join('、')||'—')}</td><td class="num">${tot}日</td><td><button class="btn sm primary" data-act="saveMember" data-r="${m._id}">保存</button> <button class="link muted" data-act="close" data-k="mem:${m._id}">やめる</button></td></tr>`
+      h+=S.open['mem:'+m._id]?`<tr><td><input class="btn sm" style="font-weight:400" aria-label="児童名" id="em-n-${m._id}" data-draft="em.${m._id}.n" value="${esc(draft('em.'+m._id+'.n',m.name))}"></td><td><input class="btn sm" style="font-weight:400" aria-label="保護者名" id="em-p-${m._id}" data-draft="em.${m._id}.p" value="${esc(draft('em.'+m._id+'.p',m.parent||''))}"></td><td>${esc(sib.join('、')||'—')}</td><td class="num">${tot}日</td><td><button class="btn sm primary" data-act="saveMember" data-r="${m._id}">保存</button> <button class="link muted" data-act="close" data-k="mem:${m._id}">やめる</button></td></tr>`
       :`<tr><td><strong>${esc(m.name)}</strong></td><td>${esc(m.parent||'—')}</td><td>${sib.length?'兄弟：'+esc(sib.join('、')):'—'}</td><td class="num">${tot}日</td><td><button class="link" data-act="open" data-k="mem:${m._id}">編集</button> ${S.confirm==='m:'+m._id?`<button class="btn sm danger" data-act="delMember" data-r="${m._id}">本当に削除（卒業・退部）</button>`:`<button class="link muted" data-act="confirm" data-k="m:${m._id}">削除</button>`}</td></tr>`;
     }
     h+='</tbody></table></div>';
-  }else h+='<p class="note">まだ選手が登録されていません。保護者が「マイページ」から登録します。</p>';
-  h+=`<p class="note">保護者には、このアプリのURLと登録コードを個別に伝えてください。卒業・退部した家庭は、ここで選手を削除してください（ログインもできなくなります）。</p></section>`;
+  }else h+='<p class="note">まだ児童が登録されていません。保護者が「マイページ」から登録します。</p>';
+  h+=`<p class="note">保護者には、このアプリのURLと登録コードを個別に伝えてください。卒業・退部した家庭は、ここで児童を削除してください（ログインもできなくなります）。</p></section>`;
   const s=S.settings;
   h+=`<form class="card" id="a-set" data-form="settings"><h2>設定（運用ルール・緊急連絡）</h2><div class="fgrid">
     <div class="field"><label for="st-round">割り勘の端数</label><select id="st-round" data-draft="st.round">${[1,10,50,100].map(n=>`<option value="${n}"${String(draft('st.round',s.round||10))===String(n)?' selected':''}>${n}円単位で切り上げ</option>`).join('')}</select></div>
-    <div class="field"><label for="st-leader">活動の責任者</label><input id="st-leader" data-draft="st.leader" value="${esc(draft('st.leader',s.leader||''))}" placeholder="例：保護者代表 山田"></div>
-    <div class="field"><label for="st-contact">緊急連絡先</label><input id="st-contact" data-draft="st.contact" value="${esc(draft('st.contact',s.contact||''))}" placeholder="共有してよい連絡先だけ"></div>
+    <div class="field"><label for="st-leader">活動の責任者</label><input id="st-leader" data-draft="st.leader" value="${esc(draft('st.leader',s.leader||''))}" placeholder="例：保護者代表 山田（氏名だけ）"></div>
     <div class="field wide"><label for="st-proc">緊急時の手順</label><textarea id="st-proc" data-draft="st.procedure" placeholder="例：1. けがをしたら練習を止める 2. 責任者に連絡 3. 保護者へ電話">${esc(draft('st.procedure',s.procedure||''))}</textarea></div></div>
-    <p class="note">連絡先はこのページを開ける全員に表示されます。個人の電話番号は本人の了承を取ってから載せてください。</p>
+    <p class="note">氏名以外の個人情報（電話番号・住所・メールアドレスなど）は書かないでください。連絡先は保護者どうしで直接やりとりしてください。</p>
     <div class="actions"><button class="btn sm primary">保存する</button></div></form>`;
   const fams=[...new Set(S.members.map(m=>famKey(m._id)))];
   if(!S.authStatus&&!S.authLoading){S.authLoading=true;TENNIS.call('authStatus').then(r=>{S.authStatus=r.families}).catch(e=>toast(errMsg(e))).finally(()=>{S.authLoading=false;scheduleRender()})}
@@ -1035,7 +1035,7 @@ function viewAdmin(){
   h+=`<section class="card" id="a-pw"><h2>ログインとパスワード</h2>
     <p class="note">保護者は、お子さんを選び、<strong>登録コード</strong>を入れてはじめのパスワードを決めます。登録コードは家庭ごとに1回だけ使えて、使うと消えます。コードは本人に直接（個別のLINEや手渡し）伝えてください。グループには流さないでください。パスワードと登録コードはサーバーだけが確認し、誰も見ることはできません。</p>
     ${!S.authStatus?'<p class="note">読み込み中…</p>':fams.length?`<div class="lines">${fams.map(k=>{const a=AS[k]||{},code=S.codes[k];return `<div class="line" style="align-items:center"><div><strong>${esc(famOf(k).map(name).join('・'))}</strong><div class="sub">${a.setAt?'パスワード設定済み'+(a.setAt>1?'（'+stamp(a.setAt)+'）':''):a.invitedAt?'登録コード発行済み・まだ設定していません':'未登録（登録コードが必要）'}</div>${code?`<div style="margin-top:4px">登録コード：<strong style="font-size:20px;letter-spacing:.15em">${code}</strong> <span class="small muted">（この画面を閉じると再表示できません）</span></div>`:''}</div>
-      <div class="row">${a.setAt?(S.confirm==='pwr:'+k?`<button class="btn sm danger" data-act="pwReset" data-k="${esc(k)}">本当にリセット</button>`:`<button class="link muted" data-act="confirm" data-k="pwr:${esc(k)}">パスワードをリセット</button>`):`<button class="btn sm primary" data-act="issueCode" data-k="${esc(k)}">${a.invitedAt?'コードを再発行':'登録コードを発行'}</button>`}</div></div>`}).join('')}</div>`:'<p class="note">まだ家庭がありません。下の「選手の登録」から登録してください。</p>'}
+      <div class="row">${a.setAt?(S.confirm==='pwr:'+k?`<button class="btn sm danger" data-act="pwReset" data-k="${esc(k)}">本当にリセット</button>`:`<button class="link muted" data-act="confirm" data-k="pwr:${esc(k)}">パスワードをリセット</button>`):`<button class="btn sm primary" data-act="issueCode" data-k="${esc(k)}">${a.invitedAt?'コードを再発行':'登録コードを発行'}</button>`}</div></div>`}).join('')}</div>`:'<p class="note">まだ家庭がありません。下の「児童の登録」から登録してください。</p>'}
     <form data-form="admin-change" class="fgrid"><h3 class="wide">管理者パスワードの変更</h3>
       <div class="field"><label for="ac-1">新しい管理者パスワード（8文字以上）</label><input id="ac-1" type="password" autocomplete="new-password" data-draft="ac-1" value=""></div>
       <div class="field"><label for="ac-2">もう一度入力</label><input id="ac-2" type="password" autocomplete="new-password" data-draft="ac-2" value=""></div>
@@ -1074,7 +1074,7 @@ function sheetBody(){
       ${k==='driver'?`<div class="field"><label for="rg-seats">ほかに乗せられる人数</label><select id="rg-seats" data-draft="rg.seats">${[1,2,3,4,5,6].map(n=>`<option value="${n}"${String(draft('rg.seats',r.seats||3))===String(n)?' selected':''}>${n}人</option>`).join('')}</select></div>
       <div class="field wide"><label for="rg-route">出発時刻と経路</label><input id="rg-route" data-draft="rg.route" value="${esc(draft('rg.route',r.route||''))}" placeholder="例：8:20 ○○小学校前 → コート"></div>`
       :`<div class="field wide"><label for="rg-pick">乗る場所</label><input id="rg-pick" data-draft="rg.pickup" value="${esc(draft('rg.pickup',r.pickup||''))}" placeholder="例：○○小学校前"></div>`}
-      <p class="note wide">お子さんは「参加」で登録されます。住所や電話番号は書かず、待ち合わせ場所だけを書いてください。</p>
+      <p class="note wide">お子さんは「参加」で登録されます。住所・電話番号などの個人情報は書かず、待ち合わせ場所（例：○○公園前）だけを書いてください。</p>
       <div class="actions wide">${r.transport===(k==='driver'?'can':'cannot')?`<button type="button" class="btn danger" data-act="unregister" data-p="${p._id}" data-m="${m0}">登録を取り消す</button>`:''}${close}<button class="btn primary">登録する</button></div></form>`;
   }
   if(k==='adminAuth'){
@@ -1093,7 +1093,7 @@ function sheetBody(){
     const p=practice(c.p);const off=S.members.filter(m=>resp(p._id,m._id)?.attend!=='yes');
     return `<form data-form="walkin" class="fgrid"><h2 class="wide">参加した子を追加（${mdw(p.date)}）</h2>
       <p class="note wide">保護者の登録なしで来た子にチェックしてください。追加した子は「管理者が追加」と表示され、参加日数・テニスコート代金の割り勘・その家庭の1か月のテニスコート代金に自動で入ります。</p>
-      ${off.length?`<div class="plist wide">${off.map(m=>`<label class="prow check" style="align-items:center"><input type="checkbox" data-draft-check="wi.${m._id}" ${draft('wi.'+m._id,false)?'checked':''}> ${av(m._id)}<span class="grow"><strong>${esc(m.name)}</strong> <span class="small muted">${m.parent?esc(m.parent)+'さん':''}</span></span></label>`).join('')}</div>`:'<p class="note wide">登録済みの選手は全員参加になっています。</p>'}
+      ${off.length?`<div class="plist wide">${off.map(m=>`<label class="prow check" style="align-items:center"><input type="checkbox" data-draft-check="wi.${m._id}" ${draft('wi.'+m._id,false)?'checked':''}> ${av(m._id)}<span class="grow"><strong>${esc(m.name)}</strong> <span class="small muted">${m.parent?esc(m.parent)+'さん':''}</span></span></label>`).join('')}</div>`:'<p class="note wide">登録済みの児童は全員参加になっています。</p>'}
       <p class="note wide">選べるのはアプリに登録されている子だけです。名簿にいない子は、先に「メンバー管理」で登録してください。追加すると、その子の保護者のアプリにお知らせが出ます。</p>
       <div class="actions wide">${close}<button class="btn primary">参加者に追加</button></div></form>`;
   }
@@ -1140,6 +1140,7 @@ function sheetBody(){
   }
   if(k==='post'){
     return `<form data-form="post" class="fgrid"><h2 class="wide">連絡を投稿</h2>
+      <p class="note wide">氏名以外の個人情報（電話番号・住所・メールアドレスなど）は書かないでください。</p>
       <div class="field wide"><label for="po-title">件名</label><input id="po-title" data-draft="po.title" value="${esc(draft('po.title',''))}" placeholder="例：10/24 の練習について"></div>
       <div class="field wide"><label for="po-body">本文</label><textarea id="po-body" data-draft="po.body">${esc(draft('po.body',''))}</textarea></div>
       <div class="field"><label for="po-level">種類</label><select id="po-level" data-draft="po.level">${[['normal','通常'],['important','重要（確認してもらう）'],['emergency','緊急（雨天中止・急な変更）']].map(([v,l])=>`<option value="${v}"${draft('po.level','normal')===v?' selected':''}>${l}</option>`).join('')}</select></div>
@@ -1254,10 +1255,11 @@ document.addEventListener('click',async e=>{
     case 'pin':{const po=S.posts.find(x=>x._id===r);await write(()=>col('posts').doc(r).update({pinned:!po.pinned}));break}
     case 'delPost':S.confirm=null;await write(()=>col('posts').doc(r).delete(),'連絡を削除しました');break;
     case 'delComment':await write(()=>col('comments').doc(r).delete());break;
-    case 'delMember':S.confirm=null;await write(()=>col('members').doc(r).delete(),'選手を削除しました');if(isMine(r))await setFamily(S.family.filter(x=>x!==r));break;
+    case 'delMember':S.confirm=null;await write(()=>col('members').doc(r).delete(),'児童を削除しました');if(isMine(r))await setFamily(S.family.filter(x=>x!==r));break;
     case 'saveMember':{
       const mm=mem(r);const n=String(draft('em.'+r+'.n',mm.name)).trim();
-      if(!n){toast('選手名を入力してください');return}
+      if(!n){toast('児童名を入力してください');return}
+      if(hasPII(n)||hasPII(draft('em.'+r+'.p',''))){toast(PII_MSG);return}
       if(await write(()=>col('members').doc(r).update({name:n,parent:String(draft('em.'+r+'.p',mm.parent||'')).trim()}),'保存しました')){S.open['mem:'+r]=false;clearDrafts('em.'+r)}
       break}
     case 'addPhoto':S.open['consent:'+p]=true;S.drafts.consent=false;break;
@@ -1278,9 +1280,17 @@ document.addEventListener('change',async e=>{
   if(t.id==='photo-input'&&t.files&&t.files[0]){const f=t.files[0];t.value='';await uploadPhoto(S.photoFor,f);render()}
 });
 document.addEventListener('input',e=>{const k=e.target.dataset.draft;if(k)S.drafts[k]=e.target.value;if(k==='sh.text'){const a=document.getElementById('sh-link');if(a)a.href='https://line.me/R/share?text='+encodeURIComponent(e.target.value)}});
+// 氏名以外の個人情報（電話番号・メールアドレス・郵便番号）を書けないようにする
+const PII=[/[0-9０-９](?:[\s\-－ー‐−()（）]*[0-9０-９]){9,}/,/[A-Za-z0-9._%+\-]+[@＠][A-Za-z0-9.\-]+\.[A-Za-z]{2,}/,/〒/];
+function hasPII(t){return PII.some(r=>r.test(String(t||'')))}
+const PII_MSG='電話番号・メールアドレス・住所などの個人情報は書けません。氏名と、待ち合わせ場所などの必要なことだけを書いてください。';
 document.addEventListener('submit',async e=>{
   e.preventDefault();
   const f=e.target,kind=f.dataset.form,c=S.ctx;
+  if(!/^(login|admin-(set|enter|reauth|change))/.test(kind||'')){
+    const bad=[...f.querySelectorAll('input:not([type]),input[type=text],textarea')].find(x=>hasPII(x.value));
+    if(bad){toast(PII_MSG);bad.focus();return}
+  }
   const T=k=>String(draft(k,'')??'').trim();
   if(kind==='member'){
     const n=T('nm.name');if(!n){toast('お子さんの名前を入力してください');return}
@@ -1363,7 +1373,7 @@ document.addEventListener('submit',async e=>{
   }
   if(kind==='settings'){
     const s=S.settings;
-    const data={round:Number(draft('st.round',s.round||10)),leader:String(draft('st.leader',s.leader||'')).trim(),contact:String(draft('st.contact',s.contact||'')).trim(),procedure:String(draft('st.procedure',s.procedure||'')).trim()};
+    const data={round:Number(draft('st.round',s.round||10)),contact:'',leader:String(draft('st.leader',s.leader||'')).trim(),procedure:String(draft('st.procedure',s.procedure||'')).trim()};
     if(await write(()=>S.db.doc('settings/app').set({...S.settings,...data}),'保存しました'))clearDrafts('st.');
   }
   if(kind==='login-pick'){
@@ -1399,7 +1409,7 @@ document.addEventListener('submit',async e=>{
   }
   if(kind==='member-admin'){
     if(!S.admin)return;
-    const n=T('ma.name');if(!n){toast('選手名を入力してください');return}
+    const n=T('ma.name');if(!n){toast('児童名を入力してください');return}
     const ref=col('members').doc();const sib=draft('ma.fam','');
     if(await write(()=>ref.set({name:n,parent:T('ma.parent'),family:sib||ref.id,createdAt:Date.now()}),n+'さんを登録しました'))clearDrafts('ma.');
   }

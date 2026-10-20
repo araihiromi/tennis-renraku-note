@@ -21,35 +21,35 @@
 自分のパソコンに何も入れずにできます。
 
 1. Firebase と同じ Google アカウントで https://shell.cloud.google.com を開く。
-2. 次を 1 行ずつ貼り付けて実行する（`<プロジェクトID>` は Firebase のプロジェクト ID に置き換え）。
+2. 次を 1 行ずつ貼り付けて実行する。
 
 ```sh
 git clone https://github.com/araihiromi/tennis-renraku-note.git
 cd tennis-renraku-note
 # セットアップキー（最初の管理者パスワードを決めるときに1回だけ使う）を作って表示する。メモしておく
 echo "SETUP_KEY=$(openssl rand -hex 12)" > functions/.env
-echo "APP_URL=https://<プロジェクトID>.web.app/" >> functions/.env
+echo "APP_URL=https://tennis-renraku-note.web.app/" >> functions/.env
 cat functions/.env
 npm --prefix functions ci
 npx firebase-tools@15.32.1 login --no-localhost
-npx firebase-tools@15.32.1 deploy --project <プロジェクトID>
+npx firebase-tools@15.32.1 deploy --project tennis-renraku-note
 ```
 
 - `git clone` でユーザー名とパスワードを聞かれたら、GitHub のユーザー名と「Personal access token」（GitHub の Settings → Developer settings で作成）を入れます。
 - `login` で表示される URL を開いて許可し、出てきたコードを貼り付けます。
-- 終わると `https://<プロジェクトID>.web.app` で開けるようになります。
+- 終わると `https://tennis-renraku-note.web.app` で開けるようになります。
 
 ## 3. 使いはじめ
 
 1. アプリを開き「管理者としてひらく」→ セットアップキーと管理者パスワード（8文字以上）を設定。
-2. 管理者画面の「メンバー管理」で選手を全員登録（兄弟は「家庭」で同じ家庭を選ぶ）。
+2. 管理者画面の「メンバー管理」で児童を全員登録（兄弟は「家庭」で同じ家庭を選ぶ）。
 3. 「ログインとパスワード」で家庭ごとに登録コードを発行し、保護者に**個別に**伝える（URL も一緒に）。
 4. 保護者は、お子さんを選び、登録コードと自分で決めたパスワードでログイン。「この端末で通知を受け取る」を押すとプッシュ通知が届きます。
    - iPhone は Safari の共有ボタン →「ホーム画面に追加」で追加したアプリから開いて、通知をオンにします（iOS 16.4 以降）。
 
 ## 更新するとき
 
-Cloud Shell で `cd tennis-renraku-note && git pull && npx firebase-tools@15.32.1 deploy --project <プロジェクトID>`。
+Cloud Shell で `cd tennis-renraku-note && git pull && npx firebase-tools@15.32.1 deploy --project tennis-renraku-note`。
 
 ## テスト
 

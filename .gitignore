@@ -3,4 +3,3 @@ functions/node_modules/
 functions/.env*
 .firebase/
 *.log
-.firebaserc

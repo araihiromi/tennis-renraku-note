@@ -36,6 +36,15 @@ else
 fi
 
 echo
+echo "=== ログイン用の権限を設定しています ==="
+# サーバーがログイン用のトークン（カスタムトークン）に署名できるようにする
+NUM=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
+SA="$NUM-compute@developer.gserviceaccount.com"
+gcloud services enable iamcredentials.googleapis.com --project "$PROJECT" --quiet
+gcloud iam service-accounts add-iam-policy-binding "$SA" --member="serviceAccount:$SA" \
+  --role=roles/iam.serviceAccountTokenCreator --project "$PROJECT" --quiet >/dev/null && echo "   設定しました。" || echo "   （あとで設定してください：DEPLOY.md を参照）"
+
+echo
 echo "=== 4/4 公開しています（5〜10分。そのまま待ってください） ==="
 CORE="hosting,firestore,storage"
 for f in loginList login register adminLogin setupAdmin changeAdminPassword authStatus issueCode resetPassword; do CORE="$CORE,functions:$f"; done

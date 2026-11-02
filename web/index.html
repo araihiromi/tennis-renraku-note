@@ -272,6 +272,12 @@ details ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:50;max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://asia-northeast1-tennis-renraku-note.cloudfunctions.net" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js">
 <script src="firebase-config.js"></script>
 <script type="module" src="backend.js"></script>
 </head>
@@ -1238,7 +1244,7 @@ document.addEventListener('click',async e=>{
     case 'pwReset':{S.confirm=null;if(!S.admin)break;try{await TENNIS.call('resetPassword',{fam:k});S.authStatus=null;toast('リセットしました。登録コードを発行して保護者に伝えてください')}catch(e){toast(errMsg(e))}break}
     case 'logout':S.drawer=false;await TENNIS.logout();return;
     case 'loginBack':S.login={step:'pick'};S.lockErr='';clearDrafts('ls.');clearDrafts('le.');break;
-    case 'adminLogin':S.login={step:'admin'};S.lockErr='';break;
+    case 'adminLogin':S.login={step:'admin'};S.lockErr='';warm(S.adminReady?'adminLogin':'setupAdmin');break;
     case 'issueCode':{if(!S.admin)break;try{const r=await TENNIS.call('issueCode',{fam:k});S.codes={...(S.codes||{}),[k]:r.code};S.authStatus=null;toast('登録コードを発行しました')}catch(e){toast(errMsg(e))}break}
     case 'pushOn':{try{await TENNIS.push.enable(S.session);toast('この端末で通知を受け取ります')}catch(e){toast(e.code==='denied'?'通知が許可されませんでした。ブラウザの設定で許可してください。':e.code==='unsupported'?'この端末やブラウザでは通知を受け取れません。':'通知をオンにできませんでした。')}break}
     case 'pushOff':await TENNIS.push.disable();toast('この端末の通知をオフにしました');break;
@@ -1255,12 +1261,12 @@ document.addEventListener('click',async e=>{
     case 'pin':{const po=S.posts.find(x=>x._id===r);await write(()=>col('posts').doc(r).update({pinned:!po.pinned}));break}
     case 'delPost':S.confirm=null;await write(()=>col('posts').doc(r).delete(),'連絡を削除しました');break;
     case 'delComment':await write(()=>col('comments').doc(r).delete());break;
-    case 'delMember':S.confirm=null;await write(()=>col('members').doc(r).delete(),'児童を削除しました');if(isMine(r))await setFamily(S.family.filter(x=>x!==r));break;
+    case 'delMember':S.confirm=null;await write(()=>col('members').doc(r).delete(),'児童を削除しました');refreshLoginList();if(isMine(r))await setFamily(S.family.filter(x=>x!==r));break;
     case 'saveMember':{
       const mm=mem(r);const n=String(draft('em.'+r+'.n',mm.name)).trim();
       if(!n){toast('児童名を入力してください');return}
       if(hasPII(n)||hasPII(draft('em.'+r+'.p',''))){toast(PII_MSG);return}
-      if(await write(()=>col('members').doc(r).update({name:n,parent:String(draft('em.'+r+'.p',mm.parent||'')).trim()}),'保存しました')){S.open['mem:'+r]=false;clearDrafts('em.'+r)}
+      if(await write(()=>col('members').doc(r).update({name:n,parent:String(draft('em.'+r+'.p',mm.parent||'')).trim()}),'保存しました')){refreshLoginList();S.open['mem:'+r]=false;clearDrafts('em.'+r)}
       break}
     case 'addPhoto':S.open['consent:'+p]=true;S.drafts.consent=false;break;
     case 'pickPhoto':if(!S.drafts.consent){toast('了承を得ていることにチェックしてください');return}S.photoFor=p;document.getElementById('photo-input').click();return;
@@ -1296,7 +1302,7 @@ document.addEventListener('submit',async e=>{
     const n=T('nm.name');if(!n){toast('お子さんの名前を入力してください');return}
     if(!S.session||S.session==='admin'){toast('家庭としてログインしてから追加してください');return}
     const ref=col('members').doc();
-    if(await write(()=>ref.set({name:n,parent:T('nm.parent')||mem(S.family[0])?.parent||'',family:S.session,createdAt:Date.now()}),n+'さんを家族に追加しました')){clearDrafts('nm.');S.family=[...S.family,ref.id]}
+    if(await write(()=>ref.set({name:n,parent:T('nm.parent')||mem(S.family[0])?.parent||'',family:S.session,createdAt:Date.now()}),n+'さんを家族に追加しました')){refreshLoginList();clearDrafts('nm.');S.family=[...S.family,ref.id]}
   }
   if(kind==='practice'){
     const base=c.base||{};const g=x=>String(draft('pf.'+x,base[x]??'')??'').trim();
@@ -1379,6 +1385,7 @@ document.addEventListener('submit',async e=>{
   if(kind==='login-pick'){
     const m=(S.loginMembers||[]).find(x=>x.id===draft('lp.m',''));if(!m){S.lockErr='お子さんを選んでください。';render();return}
     S.lockErr='';S.login={step:m.registered?'enter':'set',mid:m.id,name:m.name,invited:m.invited};
+    if(!m.registered&&m.invited)warm('register');
   }
   if(kind==='login-set'||kind==='login-enter'||kind==='admin-enter'||kind==='admin-set'||kind==='admin-reauth'){
     if(S.busy)return;
@@ -1396,6 +1403,7 @@ document.addEventListener('submit',async e=>{
       fn='setupAdmin';data={setupKey:String(draft('as-key','')),password:p1};
     }else{fn='adminLogin';data={password:String(draft(kind==='admin-enter'?'ad-pw':'ar-pw',''))}}
     S.busy=true;S.lockErr='';render();
+    await backend;
     try{const r=await TENNIS.call(fn,data);['ls-','le-','ad-','as-','ar-'].forEach(clearDrafts);closeSheet();await afterSignIn(r.token)}
     catch(e){S.lockErr=errMsg(e);if(kind==='admin-set'&&e&&/already-exists/.test(e.code||'')){S.adminReady=true}if(kind==='admin-reauth')toast(S.lockErr);['ls-1','ls-2','le-pw','ad-pw','ar-pw','as-1','as-2'].forEach(k=>delete S.drafts[k])}
     S.busy=false;
@@ -1411,7 +1419,7 @@ document.addEventListener('submit',async e=>{
     if(!S.admin)return;
     const n=T('ma.name');if(!n){toast('児童名を入力してください');return}
     const ref=col('members').doc();const sib=draft('ma.fam','');
-    if(await write(()=>ref.set({name:n,parent:T('ma.parent'),family:sib||ref.id,createdAt:Date.now()}),n+'さんを登録しました'))clearDrafts('ma.');
+    if(await write(()=>ref.set({name:n,parent:T('ma.parent'),family:sib||ref.id,createdAt:Date.now()}),n+'さんを登録しました')){clearDrafts('ma.');refreshLoginList()}
   }
   S.pendingRender=false;render();
 });
@@ -1469,12 +1477,38 @@ async function setFamily(ids){
 /* ---------- boot ---------- */
 try{S.seenAt=Number(localStorage.getItem('tennis.seenAt')||0)}catch(_){}
 render();
+// Firebase の部品（backend.js）の読み込み完了を待つ
+const backend=new Promise(res=>{if(window.TENNIS)res(window.TENNIS);else window.addEventListener('tennis-ready',()=>res(window.TENNIS),{once:true})});
+// サーバーの起動待ち（コールドスタート）を、保護者がお子さんを選んでいるあいだに済ませる
+function warm(name){backend.then(T=>T.call(name,{warm:true})).catch(()=>{})}
+// ログイン画面のお子さん一覧は、Firebase の部品を待たずに公開の一覧（public/loginList）から直接読む
+function fromRest(v){
+  if(!v)return null;
+  if('stringValue' in v)return v.stringValue;if('booleanValue' in v)return v.booleanValue;
+  if('integerValue' in v)return Number(v.integerValue);if('doubleValue' in v)return v.doubleValue;
+  if('arrayValue' in v)return (v.arrayValue.values||[]).map(fromRest);
+  if('mapValue' in v){const o={};for(const [k,x] of Object.entries(v.mapValue.fields||{}))o[k]=fromRest(x);return o}
+  return null;
+}
+async function fastLoginList(){
+  const c=self.FIREBASE_CONFIG,base=self.USE_EMULATOR?'http://127.0.0.1:8080':'https://firestore.googleapis.com';
+  const r=await fetch(`${base}/v1/projects/${c.projectId}/databases/(default)/documents/public/loginList`+(self.USE_EMULATOR?'':'?key='+c.apiKey));
+  if(!r.ok)throw new Error('no list');
+  return fromRest({mapValue:await r.json()});
+}
 async function start(){
-  try{const r=await TENNIS.call('loginList');S.loginMembers=r.members;S.adminReady=r.adminReady}
-  catch(_){S.offline=true}
+  warm('login');
+  try{const d=await fastLoginList();S.loginMembers=d.members||[];S.adminReady=!!d.adminReady}
+  catch(_){
+    // 一覧がまだないとき（公開直後など）はサーバーに作ってもらう
+    try{const T=await backend;const r=await T.call('loginList');S.loginMembers=r.members;S.adminReady=r.adminReady}
+    catch(_){S.offline=true}
+  }
   S.ready=true;render();
 }
-if(window.TENNIS)start();else window.addEventListener('tennis-ready',start,{once:true});
+start();
+// 児童の登録・変更のあと、ログイン画面の一覧を作り直す
+function refreshLoginList(){backend.then(T=>T.call('loginList')).catch(()=>{})}
 })();
 </script>
 </body>

@@ -20,6 +20,8 @@ service cloud.firestore {
     function unchanged(keys) { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(keys); }
 
     match /secrets/{id} { allow read, write: if false; }
+    // ログイン画面のお子さん一覧（名前と登録済みかどうかだけ）。ログイン前に読むので誰でも読める。書くのはサーバーだけ
+    match /public/{id} { allow read: if true; allow write: if false; }
     match /pushLog/{id} { allow read, write: if false; }
 
     match /settings/{id} {

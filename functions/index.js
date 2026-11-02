@@ -70,20 +70,28 @@ async function tokenFor(fam, isAdmin) {
 }
 
 // ログイン画面のお子さん一覧（名前と、登録済みかどうかだけ）
-exports.loginList = onCall(async () => {
+// 画面がすぐ表示できるよう public/loginList に保存しておき、ログイン前でもそこから読む
+async function rebuildLoginList() {
   const [ms, ss] = await Promise.all([db.collection('members').get(), db.collection('secrets').get()]);
   const has = new Set(ss.docs.map((d) => d.id));
-  return {
+  const data = {
     members: ms.docs.map((d) => {
       const fam = d.data().family || d.id;
       return {id: d.id, name: d.data().name || '', createdAt: d.data().createdAt || 0, registered: has.has('auth_' + fam), invited: has.has('invite_' + fam)};
     }).sort((a, b) => a.createdAt - b.createdAt),
     adminReady: has.has('admin'),
   };
-});
+  await db.doc('public/loginList').set({...data, updatedAt: Date.now()});
+  return data;
+}
+// warm: true は起動待ち（コールドスタート）を先に済ませるための呼び出し
+const isWarm = (req) => req.data && req.data.warm === true;
+
+exports.loginList = onCall(async (req) => (isWarm(req) ? {} : rebuildLoginList()));
 
 // 家庭のパスワードでログイン
 exports.login = onCall(async (req) => {
+  if (isWarm(req)) return {};
   const fam = await familyOf(req.data && req.data.memberId);
   await guard(fam);
   const rec = (await secrets('auth_' + fam).get()).data();
@@ -97,6 +105,7 @@ exports.login = onCall(async (req) => {
 
 // はじめてのログイン：登録コード＋新しいパスワード
 exports.register = onCall(async (req) => {
+  if (isWarm(req)) return {};
   const {memberId, code, password} = req.data || {};
   const fam = await familyOf(memberId);
   if (typeof password !== 'string' || password.length < 6) throw new HttpsError('invalid-argument', 'パスワードは6文字以上にしてください。');
@@ -117,11 +126,13 @@ exports.register = onCall(async (req) => {
     throw new HttpsError('unauthenticated', '登録コードが違います。管理担当の方に確認してください。');
   }
   await cleared(fam);
+  await rebuildLoginList();
   return {token: await tokenFor(fam, false)};
 });
 
 // 管理者パスワード（家庭としてログイン中なら、その家庭のまま管理者権限を足す）
 exports.adminLogin = onCall(async (req) => {
+  if (isWarm(req)) return {};
   await guard('admin');
   const rec = (await secrets('admin').get()).data();
   if (!rec) throw new HttpsError('failed-precondition', '管理者パスワードがまだ設定されていません。');
@@ -136,6 +147,7 @@ exports.adminLogin = onCall(async (req) => {
 
 // 最初の管理者パスワード：デプロイ時に決めたセットアップキーを知っている人だけ
 exports.setupAdmin = onCall(async (req) => {
+  if (isWarm(req)) return {};
   const key = process.env.SETUP_KEY || '';
   const {setupKey, password} = req.data || {};
   if (!key || String(setupKey || '') !== key) throw new HttpsError('permission-denied', 'セットアップキーが違います。');
@@ -147,6 +159,7 @@ exports.setupAdmin = onCall(async (req) => {
     if ((await t.get(ref)).exists) throw new HttpsError('already-exists', '管理者パスワードはすでに設定されています。「最初の画面にもどる」から管理者パスワードでひらいてください。');
     t.set(ref, {...makeSecret(password), setAt: Date.now()});
   });
+  await rebuildLoginList();
   return {token};
 });
 
@@ -182,6 +195,7 @@ exports.issueCode = onCall(async (req) => {
   const code = String(crypto.randomInt(100000, 1000000));
   await secrets('invite_' + fam).set({...makeSecret(code), createdAt: Date.now()});
   await cleared(fam);
+  await rebuildLoginList();
   return {code};
 });
 
@@ -191,6 +205,7 @@ exports.resetPassword = onCall(async (req) => {
   if (!fam || fam.includes('/')) throw new HttpsError('invalid-argument', '家庭を選んでください。');
   await secrets('auth_' + fam).delete();
   await cleared(fam);
+  await rebuildLoginList();
   return {ok: true};
 });
 

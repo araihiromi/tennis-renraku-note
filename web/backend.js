@@ -4,20 +4,25 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase
 import {getAuth, signInWithCustomToken, signOut, setPersistence, inMemoryPersistence, connectAuthEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {getFirestore, connectFirestoreEmulator, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import {getFunctions, httpsCallable, connectFunctionsEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js';
-import {getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, connectStorageEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js';
-import {getMessaging, getToken, deleteToken, isSupported, onMessage} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging.js';
 
 const app = initializeApp(self.FIREBASE_CONFIG);
 const auth = getAuth(app);
 const fs = getFirestore(app);
 const fn = getFunctions(app, 'asia-northeast1');
-const st = getStorage(app);
 if (self.USE_EMULATOR) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', {disableWarnings: true});
   connectFirestoreEmulator(fs, '127.0.0.1', 8080);
   connectFunctionsEmulator(fn, '127.0.0.1', 5001);
-  connectStorageEmulator(st, '127.0.0.1', 9199);
 }
+// 写真と通知の部品は、使うときに初めて読み込む（起動を速くするため）
+const SDK = 'https://www.gstatic.com/firebasejs/12.19.0/';
+let storageP, messagingP;
+const storageMod = () => storageP || (storageP = import(SDK + 'firebase-storage.js').then((m) => {
+  const st = m.getStorage(app);
+  if (self.USE_EMULATOR) m.connectStorageEmulator(st, '127.0.0.1', 9199);
+  return {m, st};
+}));
+const messagingMod = () => messagingP || (messagingP = import(SDK + 'firebase-messaging.js'));
 // ログインはこのタブの間だけ。閉じたり開き直したりすると、もう一度パスワードが必要
 const ready = setPersistence(auth, inMemoryPersistence);
 
@@ -56,13 +61,15 @@ const db = {doc: (p) => mkDoc(doc(fs, p)), collection: (p) => mkCol(p)};
 // 練習記録の写真
 const assets = {
   async upload(blob, opts) {
+    const {m, st} = await storageMod();
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 10) + '.jpg';
-    const r = storageRef(st, 'photos/' + id);
-    await uploadBytes(r, blob, {contentType: (opts && opts.type) || blob.type || 'image/jpeg', customMetadata: {uploader: auth.currentUser.uid}});
-    return {id, url: await getDownloadURL(r)};
+    const r = m.ref(st, 'photos/' + id);
+    await m.uploadBytes(r, blob, {contentType: (opts && opts.type) || blob.type || 'image/jpeg', customMetadata: {uploader: auth.currentUser.uid}});
+    return {id, url: await m.getDownloadURL(r)};
   },
   async delete(id) {
-    try { await deleteObject(storageRef(st, 'photos/' + id)); return {deleted: true}; } catch (e) {
+    const {m, st} = await storageMod();
+    try { await m.deleteObject(m.ref(st, 'photos/' + id)); return {deleted: true}; } catch (e) {
       if (e.code === 'storage/unauthorized') throw {code: 'not_uploader'};
       if (e.code === 'storage/object-not-found') return {deleted: false};
       throw mapErr(e);
@@ -79,7 +86,8 @@ async function listenForeground() {
     if (listening || !(await push.supported()) || Notification.permission !== 'granted') return;
     listening = true;
     const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-    onMessage(getMessaging(app), (p) => {
+    const m = await messagingMod();
+    m.onMessage(m.getMessaging(app), (p) => {
       const n = p.notification || {};
       reg.showNotification(n.title || 'テニス部連絡ノート', {body: n.body || '', icon: 'icon-192.png', badge: 'icon-192.png', tag: p.messageId});
     });
@@ -88,7 +96,7 @@ async function listenForeground() {
 
 // プッシュ通知（この端末で受け取る）
 const push = {
-  async supported() { try { return 'Notification' in self && 'serviceWorker' in navigator && await isSupported(); } catch (_) { return false; } },
+  async supported() { try { return 'Notification' in self && 'serviceWorker' in navigator && await (await messagingMod()).isSupported(); } catch (_) { return false; } },
   permission() { return 'Notification' in self ? Notification.permission : 'unsupported'; },
   token() { try { return localStorage.getItem('tennis.pushToken') || ''; } catch (_) { return ''; } },
   async enable(fam) {
@@ -96,7 +104,8 @@ const push = {
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') throw {code: 'denied'};
     const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-    const token = await getToken(getMessaging(app), {vapidKey: self.VAPID_KEY, serviceWorkerRegistration: reg});
+    const m = await messagingMod();
+    const token = await m.getToken(m.getMessaging(app), {vapidKey: self.VAPID_KEY, serviceWorkerRegistration: reg});
     await setDoc(doc(fs, 'pushTokens', token), {fam, uid: auth.currentUser.uid, at: Date.now()});
     try { localStorage.setItem('tennis.pushToken', token); } catch (_) {}
     listenForeground();
@@ -112,7 +121,7 @@ const push = {
   async disable() {
     const t = push.token();
     try { if (t) await deleteDoc(doc(fs, 'pushTokens', t)); } catch (_) {}
-    try { await deleteToken(getMessaging(app)); } catch (_) {}
+    try { const m = await messagingMod(); await m.deleteToken(m.getMessaging(app)); } catch (_) {}
     try { localStorage.removeItem('tennis.pushToken'); } catch (_) {}
   },
 };

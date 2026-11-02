@@ -10,6 +10,8 @@ const SITE=path.join(require('os').tmpdir(),'tennis-e2e-site');fs.rmSync(SITE,{r
 fs.writeFileSync(SITE+'/firebase-config.js',`self.FIREBASE_CONFIG={apiKey:'fake-key',authDomain:'demo-tennis.firebaseapp.com',projectId:'demo-tennis',storageBucket:'demo-tennis.appspot.com',messagingSenderId:'1',appId:'1:1:web:1'};self.VAPID_KEY='';self.USE_EMULATOR=true;`);
 const srv=http.createServer((q,r)=>{let f=path.join(SITE,decodeURIComponent(q.url.split('?')[0]));if(f.endsWith('/'))f+='index.html';fs.readFile(f,(e,b)=>{if(e){r.writeHead(404);return r.end()}r.writeHead(200,{'content-type':f.endsWith('.js')?'text/javascript':f.endsWith('.html')?'text/html':'application/octet-stream'});r.end(b)})}).listen(5050);
 const SDK=path.dirname(require.resolve('firebase/package.json'));
+// 練習日は「今日」にする（過ぎた日だと「次回の練習」に出ないため）
+const TODAY=(()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')})();
 const log=(...a)=>console.log(...a);let fails=0;const ok=(c,msg)=>{log((c?'PASS ':'FAIL ')+msg);if(!c)fails++};
 (async()=>{
  const b=await chromium.launch();
@@ -37,7 +39,7 @@ const log=(...a)=>console.log(...a);let fails=0;const ok=(c,msg)=>{log((c?'PASS 
  }
  ok(Object.keys(codes).length===2,'codes issued: '+JSON.stringify(codes));
  // practice by admin
- await A.click('[data-act=newPractice]');await A.fill('#pf-date','2026-10-25');await A.fill('#pf-place','市営テニスコート');await A.fill('#pf-court','A');await A.fill('#pf-fee','4000');
+ await A.click('[data-act=newPractice]');await A.fill('#pf-date',TODAY);await A.fill('#pf-place','市営テニスコート');await A.fill('#pf-court','A');await A.fill('#pf-fee','4000');
  // push tokens for the two families (FCM itself cannot run in the emulator)
  const ms=await adb.collection('members').get();const famOf=n=>{const d=ms.docs.find(d=>d.data().name===n);return d.data().family};
  const FY=famOf('山田 太郎'),FS=famOf('鈴木 一郎');
